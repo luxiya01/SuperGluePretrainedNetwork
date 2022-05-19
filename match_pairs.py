@@ -73,7 +73,7 @@ if __name__ == '__main__':
         '--input_pairs', type=str, default='assets/scannet_sample_pairs_with_gt.txt',
         help='Path to the list of image pairs')
     parser.add_argument(
-            '--input_pairs_gt_corr', type=str, default='assets/overlap_kps.json',
+            '--input_pairs_gt_corr', type=str, default=None,
             help='Path to the josn file with ground truth keypoint correspondences')
     parser.add_argument(
         '--input_dir', type=str, default='assets/scannet_sample_images/',
@@ -204,8 +204,9 @@ if __name__ == '__main__':
         print('Will write visualization images to',
               'directory \"{}\"'.format(output_dir))
 
-    with open(opt.input_pairs_gt_corr, 'r') as f:
-        overlap_kps = json.load(f)
+    if opt.input_pairs_gt_corr is not None:
+        with open(opt.input_pairs_gt_corr, 'r') as f:
+            overlap_kps = json.load(f)
     thresholds = np.arange(0, 1.1, .1)
 
     timer = AverageTimer(newline=True)
