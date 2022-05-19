@@ -229,6 +229,10 @@ class SuperGlue(nn.Module):
 
     def forward(self, data):
         """Run SuperGlue on a pair of keypoints and descriptors"""
+        # desc shape: (batch_size, desc_dim, num_kps)
+        # kpts shape: (batch_size, num_kps, 2)
+        # scores shape: (batch_size, num_kps0 + 1, num_kps1 + 1)
+
         desc0, desc1 = data['descriptors0'], data['descriptors1']
         kpts0, kpts1 = data['keypoints0'], data['keypoints1']
 
@@ -263,6 +267,7 @@ class SuperGlue(nn.Module):
         scores = log_optimal_transport(
             scores, self.bin_score,
             iters=self.config['sinkhorn_iterations'])
+        print(f'shapes: kpts0={kpts0.shape}, kpts1={kpts1.shape}, scores={scores.shape}')
 
         # Get the matches with score above "match_threshold".
         max0, max1 = scores[:, :-1, :-1].max(2), scores[:, :-1, :-1].max(1)
@@ -282,4 +287,5 @@ class SuperGlue(nn.Module):
             'matches1': indices1, # use -1 for invalid match
             'matching_scores0': mscores0,
             'matching_scores1': mscores1,
+            'scores': scores
         }
