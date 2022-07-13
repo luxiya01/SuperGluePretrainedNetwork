@@ -48,7 +48,8 @@ import torch
 from torch import nn
 
 
-def MLP(channels: List[int], do_bn: bool = True) -> nn.Module:
+def MLP(channels: List[int], do_bn: bool = False) -> nn.Module:
+    #TODO: enable bn! (Current issue: some patches only have 1 keypoint)
     """ Multi-layer perceptron """
     n = len(channels)
     layers = []
@@ -81,7 +82,9 @@ class KeypointEncoder(nn.Module):
 
     def forward(self, kpts, scores):
         inputs = [kpts.transpose(1, 2), scores.unsqueeze(1)]
-        return self.encoder(torch.cat(inputs, dim=1))
+        inputs = torch.cat(inputs, dim=1)
+        res = self.encoder(inputs)
+        return res
 
 
 def attention(query: torch.Tensor, key: torch.Tensor, value: torch.Tensor) -> Tuple[torch.Tensor,torch.Tensor]:
@@ -206,6 +209,7 @@ class SuperGlue(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = {**self.default_config, **config}
+        print(self.config)
 
         self.kenc = KeypointEncoder(
             self.config['descriptor_dim'], self.config['keypoint_encoder'])
@@ -220,12 +224,12 @@ class SuperGlue(nn.Module):
         bin_score = torch.nn.Parameter(torch.tensor(1.))
         self.register_parameter('bin_score', bin_score)
 
-        assert self.config['weights'] in ['indoor', 'outdoor']
-        path = Path(__file__).parent
-        path = path / 'weights/superglue_{}.pth'.format(self.config['weights'])
-        self.load_state_dict(torch.load(str(path)))
-        print('Loaded SuperGlue model (\"{}\" weights)'.format(
-            self.config['weights']))
+        #assert self.config['weights'] in ['indoor', 'outdoor']
+        #path = Path(__file__).parent
+        #path = path / 'weights/superglue_{}.pth'.format(self.config['weights'])
+        #self.load_state_dict(torch.load(str(path)))
+        #print('Loaded SuperGlue model (\"{}\" weights)'.format(
+        #    self.config['weights']))
 
     def forward(self, data):
         """Run SuperGlue on a pair of keypoints and descriptors"""
@@ -246,10 +250,13 @@ class SuperGlue(nn.Module):
             }
 
         # Keypoint normalization.
-        kpts0 = normalize_keypoints(kpts0, data['image0'].shape)
-        kpts1 = normalize_keypoints(kpts1, data['image1'].shape)
+        # TODO: input image shape instead of setting a hard value!
+        image_shape = (1, 1, 240, 1301)
+        kpts0 = normalize_keypoints(kpts0, image_shape)
+        kpts1 = normalize_keypoints(kpts1, image_shape)
 
         # Keypoint MLP encoder.
+        #print(f'desc0: {desc0.shape}, kpts0: {kpts0.shape}, scores0: {data["scores0"].shape}')
         desc0 = desc0 + self.kenc(kpts0, data['scores0'])
         desc1 = desc1 + self.kenc(kpts1, data['scores1'])
 
@@ -267,7 +274,7 @@ class SuperGlue(nn.Module):
         scores = log_optimal_transport(
             scores, self.bin_score,
             iters=self.config['sinkhorn_iterations'])
-        print(f'shapes: kpts0={kpts0.shape}, kpts1={kpts1.shape}, scores={scores.shape}')
+        #print(f'shapes: kpts0={kpts0.shape}, kpts1={kpts1.shape}, scores={scores.shape}')
 
         # Get the matches with score above "match_threshold".
         max0, max1 = scores[:, :-1, :-1].max(2), scores[:, :-1, :-1].max(1)
