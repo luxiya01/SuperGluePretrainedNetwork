@@ -1,7 +1,7 @@
 import json
-import pickle
 import os
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 
 
@@ -48,16 +48,30 @@ class SSSPatchDataset(Dataset):
 
     def __getitem__(self, index: int) -> dict:
         idx0, idx1 = self.pairs_above_min_overlap_percentage[index]
+        print(f'index: {index}, idx0: {idx0}, idx1: {idx1}')
         desc0, desc1 = self._load_desc(idx0), self._load_desc(idx1)
         data = {
-            'keypoints0': desc0[f'kp_{self.img_type}'],
-            'descriptors0': desc0[f'desc_{self.img_type}'],
-            'keypoints1': desc1[f'kp_{self.img_type}'],
-            'descriptors1': desc1[f'desc_{self.img_type}'],
-            'groundtruth_match0':  self.overlap_kps_dict[str(idx0)][str(idx1)],
-            'groundtruth_match1':  self.overlap_kps_dict[str(idx1)][str(idx0)],
+            'keypoints0':
+            desc0[f'kp_{self.img_type}'],
+            'descriptors0':
+            desc0[f'desc_{self.img_type}'].T,
+            'scores0':
+            np.ones(desc0[f'kp_{self.img_type}'].shape[0]),
+            'keypoints1':
+            desc1[f'kp_{self.img_type}'],
+            'descriptors1':
+            desc1[f'desc_{self.img_type}'].T,
+            'scores1':
+            np.ones(desc1[f'kp_{self.img_type}'].shape[0]),
+            'groundtruth_match0':
+            np.array(self.overlap_kps_dict[str(idx0)][str(idx1)]),
+            'groundtruth_match1':
+            np.array(self.overlap_kps_dict[str(idx1)][str(idx0)])
         }
-        return data
+        data_torch = {k: torch.from_numpy(v).float() for k, v in data.items()}
+        data_torch['patch_id0'] = int(idx0)
+        data_torch['patch_id1'] = int(idx1)
+        return data_torch
 
     def _load_desc(self, index: int):
         desc_path = os.path.join(self.desc_dir, f'patch{index}.npz')
