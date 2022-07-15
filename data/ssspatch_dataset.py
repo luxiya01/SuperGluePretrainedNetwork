@@ -3,6 +3,8 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from torchvision.io import read_image, ImageReadMode
+from wandb import Image
 
 
 class SSSPatchDataset(Dataset):
@@ -71,6 +73,10 @@ class SSSPatchDataset(Dataset):
         data_torch = {k: torch.from_numpy(v).float() for k, v in data.items()}
         data_torch['patch_id0'] = int(idx0)
         data_torch['patch_id1'] = int(idx1)
+        data_torch['image0_raw'] = read_image(os.path.join(self.patch_root, f'patch{idx0}_intensity.png'), mode=ImageReadMode.RGB)
+        data_torch['image0_norm'] = read_image(os.path.join(self.patch_root, f'patch{idx0}_norm_intensity.png'), mode=ImageReadMode.RGB)
+        data_torch['image1_raw'] = read_image(os.path.join(self.patch_root, f'patch{idx1}_intensity.png'), mode=ImageReadMode.RGB)
+        data_torch['image1_norm'] = read_image(os.path.join(self.patch_root, f'patch{idx1}_norm_intensity.png'), mode=ImageReadMode.RGB)
         return data_torch
 
     def _load_desc(self, index: int):
