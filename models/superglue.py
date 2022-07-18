@@ -197,39 +197,23 @@ class SuperGlue(nn.Module):
     Networks. In CVPR, 2020. https://arxiv.org/abs/1911.11763
 
     """
-    default_config = {
-        'descriptor_dim': 256,
-        'weights': 'indoor',
-        'keypoint_encoder': [32, 64, 128, 256],
-        'GNN_layers': ['self', 'cross'] * 9,
-        'sinkhorn_iterations': 100,
-        'match_threshold': 0.2,
-    }
 
     def __init__(self, config):
         super().__init__()
-        self.config = {**self.default_config, **config}
-        print(self.config)
+        self.config = config
 
         self.kenc = KeypointEncoder(
-            self.config['descriptor_dim'], self.config['keypoint_encoder'])
+            self.config.descriptor_dim, self.config.keypoint_encoder)
 
         self.gnn = AttentionalGNN(
-            feature_dim=self.config['descriptor_dim'], layer_names=self.config['GNN_layers'])
+            feature_dim=self.config.descriptor_dim, layer_names=self.config.gnn_layers)
 
         self.final_proj = nn.Conv1d(
-            self.config['descriptor_dim'], self.config['descriptor_dim'],
+            self.config.descriptor_dim, self.config.descriptor_dim,
             kernel_size=1, bias=True)
 
         bin_score = torch.nn.Parameter(torch.tensor(1.))
         self.register_parameter('bin_score', bin_score)
-
-        #assert self.config['weights'] in ['indoor', 'outdoor']
-        #path = Path(__file__).parent
-        #path = path / 'weights/superglue_{}.pth'.format(self.config['weights'])
-        #self.load_state_dict(torch.load(str(path)))
-        #print('Loaded SuperGlue model (\"{}\" weights)'.format(
-        #    self.config['weights']))
 
     def forward(self, data):
         """Run SuperGlue on a pair of keypoints and descriptors"""
@@ -268,12 +252,11 @@ class SuperGlue(nn.Module):
 
         # Compute matching descriptor distance.
         scores = torch.einsum('bdn,bdm->bnm', mdesc0, mdesc1)
-        scores = scores / self.config['descriptor_dim']**.5
+        scores = scores / self.config.descriptor_dim**.5
 
         # Run the optimal transport.
         scores = log_optimal_transport(
-            scores, self.bin_score,
-            iters=self.config['sinkhorn_iterations'])
+            scores, self.bin_score, iters=self.config.sinkhorn_iterations)
         #print(f'shapes: kpts0={kpts0.shape}, kpts1={kpts1.shape}, scores={scores.shape}')
 
         # Get the matches with score above "match_threshold".
@@ -284,7 +267,7 @@ class SuperGlue(nn.Module):
         zero = scores.new_tensor(0)
         mscores0 = torch.where(mutual0, max0.values.exp(), zero)
         mscores1 = torch.where(mutual1, mscores0.gather(1, indices1), zero)
-        valid0 = mutual0 & (mscores0 > self.config['match_threshold'])
+        valid0 = mutual0 & (mscores0 > self.config.match_threshold)
         valid1 = mutual1 & valid0.gather(1, indices1)
         indices0 = torch.where(valid0, indices0, indices0.new_tensor(-1))
         indices1 = torch.where(valid1, indices1, indices1.new_tensor(-1))

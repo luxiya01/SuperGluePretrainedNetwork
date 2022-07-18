@@ -12,28 +12,35 @@ from data.ssspatch_dataset import SSSPatchDataset
 
 class SSSPatchDataModule(pl.LightningDataModule):
     def __init__(self,
-                 root: str,
-                 desc: str = 'sift',
-                 img_type: str = 'norm',
-                 min_overlap_percentage: float = .15,
-                 eval_split: float = .1,
-                 batch_size: int = 1,
-                 num_workers: int = 1):
+                 config):
         super().__init__()
-        self.root = root
-        self.desc = desc
-        self.img_type = img_type
-        self.min_overlap_percentage = min_overlap_percentage
-        self.eval_split = eval_split
-        self.batch_size = batch_size
-        self.num_workers = num_workers
+        self.root = config.data_root
+        self.desc = config.data_desc
+        self.img_type = config.data_img_type
+        self.min_overlap = config.data_min_overlap
+        self.eval_split = config.data_eval_split
+        self.batch_size = config.data_batch_size
+        self.num_workers = config.data_num_workers
+        self.save_hyperparameters()
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = parent_parser.add_argument_group('SSSPatchDataModule')
+        parser.add_argument('--data_root', type=str, default='')
+        parser.add_argument('--data_desc', type=str, default='sift')
+        parser.add_argument('--data_img_type', type=str, default='norm')
+        parser.add_argument('--data_min_overlap', type=float, default=.15)
+        parser.add_argument('--data_eval_split', type=float, default=.1)
+        parser.add_argument('--data_batch_size', type=int, default=1)
+        parser.add_argument('--data_num_workers', type=int, default=1)
+        return parent_parser
 
     def setup(self, stage: Optional[str] = None) -> None:
         # Set up train and validation datasets
         # TODO: change train to train patches!
         ssspatch_train_full = SSSPatchDataset(self.root, self.desc,
                                               self.img_type,
-                                              self.min_overlap_percentage, train=True)
+                                              self.min_overlap, train=True)
         ssspatch_train_full_len = len(ssspatch_train_full)
         val_len = int(ssspatch_train_full_len * self.eval_split)
         train_len = ssspatch_train_full_len - val_len
@@ -44,7 +51,7 @@ class SSSPatchDataModule(pl.LightningDataModule):
         # Set up test dataset
         self.ssspatch_test = SSSPatchDataset(self.root, self.desc,
                                              self.img_type,
-                                             self.min_overlap_percentage, train=False)
+                                             self.min_overlap, train=False)
 
     def train_dataloader(self):
         return DataLoader(self.ssspatch_train, batch_size=self.batch_size, num_workers=self.num_workers)
