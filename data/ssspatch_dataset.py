@@ -1,19 +1,19 @@
 import json
 import os
+
 import numpy as np
 import torch
 from torch.utils.data import Dataset
 from torchvision.io import read_image, ImageReadMode
-from wandb import Image
 
 
 class SSSPatchDataset(Dataset):
     def __init__(self,
                  root: str,
-                 train: bool,
                  desc: str,
                  img_type: str,
                  min_overlap_percentage: float = .15,
+                 train: bool = True,
                  transform=None):
         self.root = root
         self.train = train
@@ -54,29 +54,33 @@ class SSSPatchDataset(Dataset):
         desc0, desc1 = self._load_desc(idx0), self._load_desc(idx1)
         data = {
             'keypoints0':
-            desc0[f'kp_{self.img_type}'],
+                desc0[f'kp_{self.img_type}'],
             'descriptors0':
-            desc0[f'desc_{self.img_type}'].T,
+                desc0[f'desc_{self.img_type}'].T,
             'scores0':
-            np.ones(desc0[f'kp_{self.img_type}'].shape[0]),
+                np.ones(desc0[f'kp_{self.img_type}'].shape[0]),
             'keypoints1':
-            desc1[f'kp_{self.img_type}'],
+                desc1[f'kp_{self.img_type}'],
             'descriptors1':
-            desc1[f'desc_{self.img_type}'].T,
+                desc1[f'desc_{self.img_type}'].T,
             'scores1':
-            np.ones(desc1[f'kp_{self.img_type}'].shape[0]),
+                np.ones(desc1[f'kp_{self.img_type}'].shape[0]),
             'groundtruth_match0':
-            np.array(self.overlap_kps_dict[str(idx0)][str(idx1)]),
+                np.array(self.overlap_kps_dict[str(idx0)][str(idx1)]),
             'groundtruth_match1':
-            np.array(self.overlap_kps_dict[str(idx1)][str(idx0)])
+                np.array(self.overlap_kps_dict[str(idx1)][str(idx0)])
         }
         data_torch = {k: torch.from_numpy(v).float() for k, v in data.items()}
         data_torch['patch_id0'] = int(idx0)
         data_torch['patch_id1'] = int(idx1)
-        data_torch['image0_raw'] = read_image(os.path.join(self.patch_root, f'patch{idx0}_intensity.png'), mode=ImageReadMode.RGB)
-        data_torch['image0_norm'] = read_image(os.path.join(self.patch_root, f'patch{idx0}_norm_intensity.png'), mode=ImageReadMode.RGB)
-        data_torch['image1_raw'] = read_image(os.path.join(self.patch_root, f'patch{idx1}_intensity.png'), mode=ImageReadMode.RGB)
-        data_torch['image1_norm'] = read_image(os.path.join(self.patch_root, f'patch{idx1}_norm_intensity.png'), mode=ImageReadMode.RGB)
+        data_torch['image0_raw'] = read_image(os.path.join(self.patch_root, f'patch{idx0}_intensity.png'),
+                                              mode=ImageReadMode.RGB)
+        data_torch['image0_norm'] = read_image(os.path.join(self.patch_root, f'patch{idx0}_norm_intensity.png'),
+                                               mode=ImageReadMode.RGB)
+        data_torch['image1_raw'] = read_image(os.path.join(self.patch_root, f'patch{idx1}_intensity.png'),
+                                              mode=ImageReadMode.RGB)
+        data_torch['image1_norm'] = read_image(os.path.join(self.patch_root, f'patch{idx1}_norm_intensity.png'),
+                                               mode=ImageReadMode.RGB)
         return data_torch
 
     def _load_desc(self, index: int):

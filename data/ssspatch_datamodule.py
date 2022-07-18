@@ -1,8 +1,10 @@
-import torch
-import pytorch_lightning as pl
-from torch.utils.data import DataLoader, random_split
-from data.ssspatch_dataset import SSSPatchDataset
 from typing import Optional
+
+import pytorch_lightning as pl
+import torch
+from torch.utils.data import DataLoader, random_split
+
+from data.ssspatch_dataset import SSSPatchDataset
 
 
 # TODO: add transforms to the data?
@@ -29,9 +31,9 @@ class SSSPatchDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None) -> None:
         # Set up train and validation datasets
         # TODO: change train to train patches!
-        ssspatch_train_full = SSSPatchDataset(self.root, 'test', self.desc,
+        ssspatch_train_full = SSSPatchDataset(self.root, self.desc,
                                               self.img_type,
-                                              self.min_overlap_percentage)
+                                              self.min_overlap_percentage, train=True)
         ssspatch_train_full_len = len(ssspatch_train_full)
         val_len = int(ssspatch_train_full_len * self.eval_split)
         train_len = ssspatch_train_full_len - val_len
@@ -40,9 +42,9 @@ class SSSPatchDataModule(pl.LightningDataModule):
             generator=torch.Generator().manual_seed(0))
 
         # Set up test dataset
-        self.ssspatch_test = SSSPatchDataset(self.root, 'test', self.desc,
+        self.ssspatch_test = SSSPatchDataset(self.root, self.desc,
                                              self.img_type,
-                                             self.min_overlap_percentage)
+                                             self.min_overlap_percentage, train=False)
 
     def train_dataloader(self):
         return DataLoader(self.ssspatch_train, batch_size=self.batch_size, num_workers=self.num_workers)
