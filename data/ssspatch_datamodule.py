@@ -4,7 +4,8 @@ from torch.utils.data import DataLoader, random_split
 from data.ssspatch_dataset import SSSPatchDataset
 from typing import Optional
 
-#TODO: add transforms to the data?
+
+# TODO: add transforms to the data?
 
 
 class SSSPatchDataModule(pl.LightningDataModule):
@@ -27,7 +28,7 @@ class SSSPatchDataModule(pl.LightningDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
         # Set up train and validation datasets
-        #TODO: change train to train patches!
+        # TODO: change train to train patches!
         ssspatch_train_full = SSSPatchDataset(self.root, 'test', self.desc,
                                               self.img_type,
                                               self.min_overlap_percentage)
