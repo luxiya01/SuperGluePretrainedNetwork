@@ -6,6 +6,8 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.io import read_image, ImageReadMode
 
+NO_MATCH = -1
+
 
 class SSSPatchDataset(Dataset):
     def __init__(self,
@@ -86,3 +88,14 @@ class SSSPatchDataset(Dataset):
     def _load_desc(self, index: int):
         desc_path = os.path.join(self.desc_dir, f'patch{index}.npz')
         return np.load(desc_path)
+
+
+def get_groundtruth_matching_keypoints(data):
+    """Returns two array of keypoints, where matching_kps0[i] is the groundtruth match to matching_kps1[i]"""
+    kps0_idx = torch.where(data['groundtruth_match0'] > NO_MATCH)
+    matching_kps0 = data['keypoints0'][kps0_idx]
+
+    kps1_idx = data['groundtruth_match0'][kps0_idx].to(int)
+    # TODO: Handle batches > 1
+    matching_kps1 = data['keypoints1'][0, kps1_idx]
+    return matching_kps0, matching_kps1
