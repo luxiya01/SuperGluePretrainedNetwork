@@ -6,6 +6,8 @@ from pytorch_lightning.loggers import WandbLogger
 from data.ssspatch_datamodule import SSSPatchDataModule
 from models.matching_train import MatchingTrain
 
+from models.logging_callbacks import LogImagesCallback
+
 wandb_logger = WandbLogger(project='sss-corr', name='220718_PL_test')
 
 parser = ArgumentParser()
@@ -21,7 +23,7 @@ args = parser.parse_args(
 model = MatchingTrain(args)
 # TODO: use GPU
 # trainer = Trainer(logger=wandb_logger, accelerator='gpu', devices=1, max_epochs=10)
-trainer = Trainer(logger=wandb_logger, max_epochs=1)
+trainer = Trainer(logger=wandb_logger, max_epochs=1, callbacks=[LogImagesCallback()])
 
 ssspatch_sift_norm_img = SSSPatchDataModule(args)
 ssspatch_sift_norm_img.setup()
