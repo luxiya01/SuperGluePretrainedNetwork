@@ -8,7 +8,7 @@ from models.matching_train import MatchingTrain
 
 from models.logging_callbacks import LogImagesCallback
 
-wandb_logger = WandbLogger(project='sss-corr', name='220719_log_GT_debug')
+wandb_logger = WandbLogger(project='sss-corr', name='220719_log_GT_debug_OrderedDict')
 
 parser = ArgumentParser()
 parser = MatchingTrain.add_model_specific_args(parser)
@@ -17,7 +17,7 @@ parser = Trainer.add_argparse_args(parser)
 args = parser.parse_args(
     ['--descriptor_dim', '128',
      '--data_root',
-     '/home/li/Documents/sss-correspondence/data/GullmarsfjordSMaRC20210209_ssh_annotations/survey2_better_resolution/9-0169to0182-nbr_pings-1301_annotated/patch240_step40_test0.1_refSSH-0170/',
+     '/home/li/Documents/sss-correspondence/data/GullmarsfjordSMaRC20210209_ssh_annotations/survey2_better_resolution/9-0169to0182-nbr_pings-1301_annotated/patch240_step40_test0.1_refSSH-0170_OrderedDict/',
      '--data_num_workers', '0'])
 
 model = MatchingTrain(args)
