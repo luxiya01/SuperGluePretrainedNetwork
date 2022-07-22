@@ -8,7 +8,7 @@ from models.matching_train import MatchingTrain
 
 from models.logging_callbacks import LogImagesCallback
 
-wandb_logger = WandbLogger(project='sss-corr', name='220719_log_GT_debug_OrderedDict')
+wandb_logger = WandbLogger(project='sss-corr', name='220722_log_predictions')
 
 parser = ArgumentParser()
 parser = MatchingTrain.add_model_specific_args(parser)

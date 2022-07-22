@@ -90,12 +90,14 @@ class SSSPatchDataset(Dataset):
         return np.load(desc_path)
 
 
-def get_groundtruth_matching_keypoints(data):
-    """Returns two array of keypoints, where matching_kps0[i] is the groundtruth match to matching_kps1[i]"""
-    kps0_idx = torch.where(data['groundtruth_match0'] > NO_MATCH)
-    matching_kps0 = data['keypoints0'][kps0_idx]
+def get_matching_keypoints_according_to_matches(matches, keypoints0, keypoints1):
+    """Given the proposed matches and two keypoint arrays, return two arrays of keypoints, where matching_kps0[i] is
+    the corresponding keypoints to matching_kps1[i] according to the input matches array (which could be groundtruth
+    or predictions."""
+    kps0_idx = torch.where(matches > NO_MATCH)
+    matching_kps0 = keypoints0[kps0_idx]
 
-    kps1_idx = data['groundtruth_match0'][kps0_idx].to(int)
+    kps1_idx = matches[kps0_idx].to(int)
     # TODO: Handle batches > 1
-    matching_kps1 = data['keypoints1'][0, kps1_idx]
+    matching_kps1 = keypoints1[0, kps1_idx]
     return matching_kps0, matching_kps1
