@@ -30,7 +30,10 @@ class LogImagesCallback(pl.Callback):
         batch_idx: int,
         unused: int = 0,
     ) -> None:
-        self._log_images(trainer, outputs, batch, stage='train')
+        # Only log training images every n batch
+        n = 50
+        if batch_idx % n == 0:
+            self._log_images(trainer, outputs, batch, stage='train')
 
     def on_test_batch_end(
         self,
