@@ -44,8 +44,8 @@ class MatchingTrain(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         pred = self.forward(batch)
         pred_scores = pred['scores']
-        loss = compute_loss(pred_scores, batch)
-        metrics = compute_metrics(pred)
+        loss = self.compute_loss(pred_scores, batch)
+        metrics = self.compute_metrics(pred)
 
         self.log('train/loss', loss)
         for k, v in metrics.items():
@@ -55,8 +55,8 @@ class MatchingTrain(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         pred = self.forward(batch)
         pred_scores = pred['scores']
-        loss = compute_loss(pred_scores, batch)
-        metrics = compute_metrics(pred)
+        loss = self.compute_loss(pred_scores, batch)
+        metrics = self.compute_metrics(pred)
 
         self.log('val/loss', loss)
         for k, v in metrics.items():
@@ -66,10 +66,11 @@ class MatchingTrain(pl.LightningModule):
     def test_step(self, batch):
         pred = self.forward(batch)
         pred_scores = pred['scores']
-        loss = compute_loss(pred_scores, batch)
-        metrics = compute_metrics(pred)
+        loss = self.compute_loss(pred_scores, batch)
+        metrics = self.compute_metrics(pred)
 
         self.log('test/loss', loss)
+        self.log_dict(metrics)
         for k, v in metrics.items():
             self.log(f'test/{k}', v)
         return {'loss': loss, 'pred': pred, **metrics}
@@ -78,54 +79,52 @@ class MatchingTrain(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer
 
+    def gt_to_array_with_and_without_matches(self, gt_list):
+        # convert gt list to a torch tensor with shape (batch_size, num_kps, 2)
+        # and then split the array into two based on whether the kp has GT correspondence
+        # the returned two arrays both have shape (num_kps, 2)
 
-def gt_to_array_with_and_without_matches(gt_list):
-    # convert gt list to a torch tensor with shape (batch_size, num_kps, 2)
-    # and then split the array into two based on whether the kp has GT correspondence
-    # the returned two arrays both have shape (num_kps, 2)
+        # TODO: handle batch_size > 1
+        gt_array = torch.stack(
+            (torch.arange(gt_list.shape[1]).unsqueeze(0).to(self.device), gt_list.clone().detach()),
+            axis=2).long()
+        gt_with_matches = gt_array[torch.where(gt_array[:, :, 1] != -1)]
+        gt_without_matches = gt_array[torch.where(gt_array[:, :, 1] == -1)]
+        return gt_with_matches, gt_without_matches
 
-    # TODO: handle batch_size > 1
-    gt_array = torch.stack(
-        (torch.arange(gt_list.shape[1]).unsqueeze(0), torch.tensor(gt_list)),
-        axis=2).long()
-    gt_with_matches = gt_array[torch.where(gt_array[:, :, 1] != -1)]
-    gt_without_matches = gt_array[torch.where(gt_array[:, :, 1] == -1)]
-    return gt_with_matches, gt_without_matches
+    def compute_loss(self, pred_scores, batch):
+        gt0_with_matches, gt0_no_matches = self.gt_to_array_with_and_without_matches(
+            batch['groundtruth_match0'])
+        gt1_with_matches, gt1_no_matches = self.gt_to_array_with_and_without_matches(
+            batch['groundtruth_match1'])
 
+        # loss from GT matches
+        loss = -pred_scores[:, gt0_with_matches[:, 0],
+                gt0_with_matches[:, 1]].sum()
+        # loss from kps from image0 without matches (matches to dust_bin with col idx = -1)
+        loss -= pred_scores[:, gt0_no_matches[:, 0], gt0_no_matches[:,
+                                                     1]].sum()
+        # loss from kps from image1 without matches (matches to dust_bin with row idx = -1)
+        loss -= pred_scores[:, gt1_no_matches[:, 1], gt1_no_matches[:,
+                                                     0]].sum()
+        nbr_matches = gt0_with_matches.shape[0] + gt0_no_matches.shape[
+            0] + gt1_no_matches.shape[0]
+        loss = loss / nbr_matches
+        return loss
 
-def compute_loss(pred_scores, batch):
-    gt0_with_matches, gt0_no_matches = gt_to_array_with_and_without_matches(
-        batch['groundtruth_match0'])
-    gt1_with_matches, gt1_no_matches = gt_to_array_with_and_without_matches(
-        batch['groundtruth_match1'])
+    @staticmethod
+    def compute_metrics(pred):
+        predictions = torch.concat([pred['matches0'], pred['matches1']], dim=1).flatten()
+        gt = torch.concat([pred['groundtruth_match0'], pred['groundtruth_match1']], dim=1).flatten()
 
-    # loss from GT matches
-    loss = -pred_scores[:, gt0_with_matches[:, 0],
-            gt0_with_matches[:, 1]].sum()
-    # loss from kps from image0 without matches (matches to dust_bin with col idx = -1)
-    loss -= pred_scores[:, gt0_no_matches[:, 0], gt0_no_matches[:,
-                                                 1]].sum()
-    # loss from kps from image1 without matches (matches to dust_bin with row idx = -1)
-    loss -= pred_scores[:, gt1_no_matches[:, 1], gt1_no_matches[:,
-                                                 0]].sum()
-    nbr_matches = gt0_with_matches.shape[0] + gt0_no_matches.shape[
-        0] + gt1_no_matches.shape[0]
-    loss = loss / nbr_matches
-    return loss
+        num_predicted_matches = torch.count_nonzero(predictions != NO_MATCH)
+        num_gt_matches = torch.count_nonzero(gt != NO_MATCH)
+        num_correctly_predicted_matches = torch.count_nonzero(torch.logical_and(predictions == gt, gt != NO_MATCH))
 
+        precision = num_correctly_predicted_matches / num_predicted_matches if num_predicted_matches > 0 else 0
+        recall = num_correctly_predicted_matches / num_gt_matches if num_gt_matches > 0 else 0
+        matching_score = num_correctly_predicted_matches / predictions.shape[0]
+        accuracy = torch.count_nonzero(predictions == gt) / predictions.shape[0]
 
-def compute_metrics(pred):
-    predictions = torch.concat([pred['matches0'], pred['matches1']], dim=1).flatten()
-    gt = torch.concat([pred['groundtruth_match0'], pred['groundtruth_match1']], dim=1).flatten()
-
-    num_predicted_matches = torch.count_nonzero(predictions != NO_MATCH)
-    num_gt_matches = torch.count_nonzero(gt != NO_MATCH)
-    num_correctly_predicted_matches = torch.count_nonzero(torch.logical_and(predictions == gt, gt != NO_MATCH))
-
-    precision = num_correctly_predicted_matches / num_predicted_matches if num_predicted_matches > 0 else 0
-    recall = num_correctly_predicted_matches / num_gt_matches if num_gt_matches > 0 else 0
-    matching_score = num_correctly_predicted_matches / predictions.shape[0]
-    accuracy = torch.count_nonzero(predictions == gt) / predictions.shape[0]
-
-    return {'precision': precision, 'recall': recall, 'matching_score': matching_score, 'accuracy': accuracy,
-            'TP': num_correctly_predicted_matches, 'FP': num_predicted_matches - num_correctly_predicted_matches}
+        return {'precision': precision, 'recall': recall, 'matching_score': matching_score, 'accuracy': accuracy,
+                'TP': num_correctly_predicted_matches, 'FP': num_predicted_matches - num_correctly_predicted_matches}

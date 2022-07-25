@@ -1,14 +1,15 @@
 from argparse import ArgumentParser
 
 from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
 from data.ssspatch_datamodule import SSSPatchDataModule
+from models.logging_callbacks import LogImagesCallback
 from models.matching_train import MatchingTrain
 
-from models.logging_callbacks import LogImagesCallback
-
-wandb_logger = WandbLogger(project='sss-corr', name='220722_log_predictions')
+run_name = '220725_test_train'
+wandb_logger = WandbLogger(project='sss-corr', name=run_name)
 
 parser = ArgumentParser()
 parser = MatchingTrain.add_model_specific_args(parser)
@@ -21,9 +22,17 @@ args = parser.parse_args(
      '--data_num_workers', '0'])
 
 model = MatchingTrain(args)
-# TODO: use GPU
-# trainer = Trainer(logger=wandb_logger, accelerator='gpu', devices=1, max_epochs=10)
-trainer = Trainer(logger=wandb_logger, max_epochs=1, callbacks=[LogImagesCallback()])
+early_stopping_callback = EarlyStopping(monitor='val/loss', mode='min', patience=5, check_finite=True)
+checkpoint_callback = ModelCheckpoint(monitor='val/loss',
+                                      dirpath=f'/home/li/Documents/SuperGluePretrainedNetwork/{run_name}',
+                                      filename='sss-epoch{epoch:02d}-val-loss-{val/loss:.2f}',
+                                      save_top_k=3)
+
+trainer = Trainer(logger=wandb_logger, max_epochs=2,
+                  callbacks=[LogImagesCallback(),
+                             early_stopping_callback],
+                  accelerator='gpu',
+                  devices=1)
 
 ssspatch_sift_norm_img = SSSPatchDataModule(args)
 ssspatch_sift_norm_img.setup()
