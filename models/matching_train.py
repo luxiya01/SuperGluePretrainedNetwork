@@ -1,13 +1,13 @@
 import pytorch_lightning as pl
 import torch
 
+from data.ssspatch_dataset import NO_MATCH
 from .superglue import SuperGlue
 
 
 class MatchingTrain(pl.LightningModule):
     """ Image Matching Frontend (SuperGlue) """
 
-    # TODO: Add metrics such as TP, FP, precision, recall to training, validation and testing steps!
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -45,29 +45,34 @@ class MatchingTrain(pl.LightningModule):
         pred = self.forward(batch)
         pred_scores = pred['scores']
         loss = compute_loss(pred_scores, batch)
+        metrics = compute_metrics(pred)
 
         self.log('train/loss', loss)
-
-        # self.log('train/pred', pred, on_step=True, on_epoch=True)
-        return {'loss': loss, 'pred': pred}
+        for k, v in metrics.items():
+            self.log(f'train/{k}', v)
+        return {'loss': loss, 'pred': pred, **metrics}
 
     def validation_step(self, batch, batch_idx):
         pred = self.forward(batch)
         pred_scores = pred['scores']
         loss = compute_loss(pred_scores, batch)
+        metrics = compute_metrics(pred)
 
         self.log('val/loss', loss)
-        # self.log('val/pred', pred, on_step=False, on_epoch=True)
-        return {'loss': loss, 'pred': pred}
+        for k, v in metrics.items():
+            self.log(f'val/{k}', v)
+        return {'loss': loss, 'pred': pred, **metrics}
 
     def test_step(self, batch):
         pred = self.forward(batch)
         pred_scores = pred['scores']
         loss = compute_loss(pred_scores, batch)
+        metrics = compute_metrics(pred)
 
         self.log('test/loss', loss)
-        # self.log('test/pred', pred, on_step=False, on_epoch=True)
-        return {'loss': loss, 'pred': pred}
+        for k, v in metrics.items():
+            self.log(f'test/{k}', v)
+        return {'loss': loss, 'pred': pred, **metrics}
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
@@ -107,3 +112,20 @@ def compute_loss(pred_scores, batch):
         0] + gt1_no_matches.shape[0]
     loss = loss / nbr_matches
     return loss
+
+
+def compute_metrics(pred):
+    predictions = torch.concat([pred['matches0'], pred['matches1']], dim=1).flatten()
+    gt = torch.concat([pred['groundtruth_match0'], pred['groundtruth_match1']], dim=1).flatten()
+
+    num_predicted_matches = torch.count_nonzero(predictions != NO_MATCH)
+    num_gt_matches = torch.count_nonzero(gt != NO_MATCH)
+    num_correctly_predicted_matches = torch.count_nonzero(torch.logical_and(predictions == gt, gt != NO_MATCH))
+
+    precision = num_correctly_predicted_matches / num_predicted_matches if num_predicted_matches > 0 else 0
+    recall = num_correctly_predicted_matches / num_gt_matches if num_gt_matches > 0 else 0
+    matching_score = num_correctly_predicted_matches / predictions.shape[0]
+    accuracy = torch.count_nonzero(predictions == gt) / predictions.shape[0]
+
+    return {'precision': precision, 'recall': recall, 'matching_score': matching_score, 'accuracy': accuracy,
+            'TP': num_correctly_predicted_matches, 'FP': num_predicted_matches - num_correctly_predicted_matches}
