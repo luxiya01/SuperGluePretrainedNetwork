@@ -47,9 +47,9 @@ class MatchingTrain(pl.LightningModule):
         loss = self.compute_loss(pred_scores, batch)
         metrics = self.compute_metrics(pred)
 
-        self.log('train/loss', loss)
+        self.log('train/loss', loss, on_step=True, on_epoch=True)
         for k, v in metrics.items():
-            self.log(f'train/{k}', v)
+            self.log(f'train/{k}', v, on_step=True, on_epoch=True)
         return {'loss': loss, 'pred': pred, **metrics}
 
     def validation_step(self, batch, batch_idx):
@@ -58,9 +58,9 @@ class MatchingTrain(pl.LightningModule):
         loss = self.compute_loss(pred_scores, batch)
         metrics = self.compute_metrics(pred)
 
-        self.log('val/loss', loss)
+        self.log('val/loss', loss, on_step=True, on_epoch=True)
         for k, v in metrics.items():
-            self.log(f'val/{k}', v)
+            self.log(f'val/{k}', v, on_step=True, on_epoch=True)
         return {'loss': loss, 'pred': pred, **metrics}
 
     def test_step(self, batch):
@@ -69,10 +69,9 @@ class MatchingTrain(pl.LightningModule):
         loss = self.compute_loss(pred_scores, batch)
         metrics = self.compute_metrics(pred)
 
-        self.log('test/loss', loss)
-        self.log_dict(metrics)
+        self.log('test/loss', loss, on_step=True, on_epoch=True)
         for k, v in metrics.items():
-            self.log(f'test/{k}', v)
+            self.log(f'test/{k}', v, on_step=True, on_epoch=True)
         return {'loss': loss, 'pred': pred, **metrics}
 
     def configure_optimizers(self):
