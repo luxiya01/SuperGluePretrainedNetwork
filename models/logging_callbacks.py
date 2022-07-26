@@ -69,9 +69,9 @@ class LogImagesCallback(pl.Callback):
             keypoints0=batch['keypoints0'],
             keypoints1=batch['keypoints1'])
 
-        matches = {'GT': {'mkpts0': gt_matching_kps0, 'mkpts1': gt_matching_kps1, 'color': [1, 1, 0, 1]},
+        matches = {'GT': {'mkpts0': gt_matching_kps0, 'mkpts1': gt_matching_kps1, 'color': [0, 1, 1, 1]},
                    'Incorrect predictions': {'mkpts0': incorrect_pred_kps0, 'mkpts1': incorrect_pred_kps1,
-                                             'color': [1, 0, 0, 1]},
+                                             'color': [0, 0, 1, 1]},
                    'Correct predictions': {'mkpts0': correct_pred_kps0, 'mkpts1': correct_pred_kps1,
                                            'color': [0, 1, 0, 1]}
                    }
