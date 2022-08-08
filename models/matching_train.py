@@ -12,6 +12,7 @@ class MatchingTrain(pl.LightningModule):
         super().__init__()
         self.config = config
         self.superglue = SuperGlue(config)
+        self.learning_rate = config.learning_rate
 
         self.save_hyperparameters()
         print(self.hparams)
@@ -24,6 +25,7 @@ class MatchingTrain(pl.LightningModule):
         parser.add_argument('--gnn_layers', type=list, default=['self', 'cross'] * 9)
         parser.add_argument('--sinkhorn_iterations', type=int, default=100)
         parser.add_argument('--match_threshold', type=float, default=0.2)
+        parser.add_argument('--learning_rate', type=float, default=1e-4)
         return parent_parser
 
     def forward(self, data):
@@ -75,7 +77,7 @@ class MatchingTrain(pl.LightningModule):
         return {'loss': loss, 'pred': pred, **metrics}
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         return optimizer
 
     def gt_to_array_with_and_without_matches(self, gt_list):
