@@ -16,7 +16,8 @@ class SSSPatchDataset(Dataset):
                  img_type: str,
                  min_overlap_percentage: float = .15,
                  train: bool = True,
-                 transform=None):
+                 transform=None,
+                 num_kps: int = None):
         self.root = root
         self.train = train
         self.desc = desc
@@ -24,6 +25,8 @@ class SSSPatchDataset(Dataset):
         self.patch_root = os.path.join(self.root,
                                        'train' if self.train else 'test')
         self.desc_dir = os.path.join(self.patch_root, self.desc)
+        self.num_kps = num_kps
+        self.image_width, self.image_height = None, None
 
         self.min_overlap_percentage = min_overlap_percentage
         self.overlap_kps_dict = self._load_overlap_kps_dict()
@@ -83,11 +86,30 @@ class SSSPatchDataset(Dataset):
                                               mode=ImageReadMode.RGB)
         data_torch['image1_norm'] = read_image(os.path.join(self.patch_root, f'patch{idx1}_norm_intensity.png'),
                                                mode=ImageReadMode.RGB)
+        if self.image_width is None:
+            _, self.image_height, self.image_width = data_torch['image0_norm'].shape
         return data_torch
 
     def _load_desc(self, index: int):
         desc_path = os.path.join(self.desc_dir, f'patch{index}.npz')
         return np.load(desc_path)
+
+    def _add_noisy_keypoints(self, annotated_kps: np.array, annotated_kps_indices: np.array) -> np.array:
+        #TODO: switch between adding random keypoints, SIFT or other keypoints!
+
+        # Generate random keypoints
+        #TODO: get approx nadir from data
+        approx_nadir = 150
+        random_bin_nbr = np.random.randint(low=approx_nadir, high=self.image_width, size=self.num_output_kps)
+        random_ping_nbr = np.random.randint(low=0, high=self.image_height, size=self.num_output_kps)
+        noisy_kps = np.stack([random_bin_nbr, random_ping_nbr]).T
+
+        # Place annotated_kps at randomly generated indices in the output noisy_kps array
+        noisy_kps[annotated_kps_indices, :] = annotated_kps
+        return noisy_kps
+
+    def _generate_random_idx_for_annotated_kps(self, num_annotated_kps: int) -> np.array:
+        return np.random.choice(self.num_output_kps, size=num_annotated_kps, replace=False)
 
 
 def get_matching_keypoints_according_to_matches(matches, keypoints0, keypoints1):
