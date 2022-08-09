@@ -95,13 +95,12 @@ class MatchingTrain(pl.LightningModule):
 
     def compute_loss(self, pred_scores, batch):
         gt0_with_matches, gt0_no_matches = self.gt_to_array_with_and_without_matches(
-            batch['groundtruth_match0'])
+            batch['gt_match0'])
         gt1_with_matches, gt1_no_matches = self.gt_to_array_with_and_without_matches(
-            batch['groundtruth_match1'])
+            batch['gt_match1'])
 
         # loss from GT matches
-        loss = -pred_scores[:, gt0_with_matches[:, 0],
-                gt0_with_matches[:, 1]].sum()
+        loss = -pred_scores[:, gt0_with_matches[:, 0], gt0_with_matches[:, 1]].sum()
         # loss from kps from image0 without matches (matches to dust_bin with col idx = -1)
         loss -= pred_scores[:, gt0_no_matches[:, 0], gt0_no_matches[:,
                                                      1]].sum()
@@ -116,7 +115,7 @@ class MatchingTrain(pl.LightningModule):
     @staticmethod
     def compute_metrics(pred):
         predictions = torch.concat([pred['matches0'], pred['matches1']], dim=1).flatten()
-        gt = torch.concat([pred['groundtruth_match0'], pred['groundtruth_match1']], dim=1).flatten()
+        gt = torch.concat([pred['gt_match0'], pred['gt_match1']], dim=1).flatten()
 
         num_predicted_matches = torch.count_nonzero(predictions != NO_MATCH)
         num_gt_matches = torch.count_nonzero(gt != NO_MATCH)

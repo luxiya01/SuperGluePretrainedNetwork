@@ -49,12 +49,12 @@ class LogImagesCallback(pl.Callback):
     def _log_images(self, trainer: "pl.Trainer", outputs: Optional[STEP_OUTPUT], batch: Any, stage: str = 'val'):
         # Log GT matches
         gt_matching_kps0, gt_matching_kps1 = get_matching_keypoints_according_to_matches(
-            matches=batch['groundtruth_match0'],
+            matches=batch['gt_match0'],
             keypoints0=batch['keypoints0'],
             keypoints1=batch['keypoints1'])
 
         # Log correct predictions
-        correct_pred_matches0 = torch.where(batch['groundtruth_match0'] == outputs['pred']['matches0'],
+        correct_pred_matches0 = torch.where(batch['gt_match0'] == outputs['pred']['matches0'],
                                             outputs['pred']['matches0'], NO_MATCH)
         correct_pred_kps0, correct_pred_kps1 = get_matching_keypoints_according_to_matches(
             matches=correct_pred_matches0,
@@ -62,7 +62,7 @@ class LogImagesCallback(pl.Callback):
             keypoints1=batch['keypoints1'])
 
         # Log incorrect predictions
-        incorrect_pred_matches0 = torch.where(batch['groundtruth_match0'] != outputs['pred']['matches0'],
+        incorrect_pred_matches0 = torch.where(batch['gt_match0'] != outputs['pred']['matches0'],
                                               outputs['pred']['matches0'], NO_MATCH)
         incorrect_pred_kps0, incorrect_pred_kps1 = get_matching_keypoints_according_to_matches(
             matches=incorrect_pred_matches0,

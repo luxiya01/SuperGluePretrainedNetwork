@@ -70,9 +70,9 @@ class SSSPatchDataset(Dataset):
                 desc1[f'desc_{self.img_type}'].T,
             'scores1':
                 np.ones(desc1[f'kp_{self.img_type}'].shape[0]),
-            'groundtruth_match0':
+            'gt_match0':
                 np.array(self.overlap_kps_dict[str(idx0)][str(idx1)]),
-            'groundtruth_match1':
+            'gt_match1':
                 np.array(self.overlap_kps_dict[str(idx1)][str(idx0)])
         }
         data_torch = {k: torch.from_numpy(v).float() for k, v in data.items()}
@@ -94,28 +94,53 @@ class SSSPatchDataset(Dataset):
         desc_path = os.path.join(self.desc_dir, f'patch{index}.npz')
         return np.load(desc_path)
 
-    def _add_noisy_keypoints(self, annotated_kps: np.array, annotated_kps_indices: np.array) -> np.array:
-        #TODO: switch between adding random keypoints, SIFT or other keypoints!
+    def _add_noisy_keypoints_and_modify_gt_match(self, raw_data):
+        # Add noisy keypoints to image0 data
+        keypoints0_new_indices = self._generate_random_idx_for_annotated_kps(raw_data['keypoints0'].shape[0])
+        keypoints0_noisy, gt_match0_noisy = self._add_noisy_keypoints(raw_data['keypoints0'], raw_data['gt_match0'],
+                                                                      keypoints0_new_indices)
+
+        # Add noisy keypoints to image1 data
+        keypoints1_new_indices = self._generate_random_idx_for_annotated_kps(raw_data['keypoints1'].shape[0])
+        keypoints1_noisy, gt_match1_noisy = self._add_noisy_keypoints(raw_data['keypoints1'], raw_data['gt_match1'],
+                                                                      keypoints1_new_indices)
+
+        # Modify the indices in gt_match0_noisy and gt_match1_noisy to correspond to the noisy keypoint indices
+        gt_match0_old_idx = gt_match0_noisy[keypoints0_new_indices]
+        gt_match0_noisy[keypoints0_new_indices] = keypoints1_new_indices[gt_match0_old_idx]
+
+        gt_match1_old_idx = gt_match1_noisy[keypoints1_new_indices]
+        gt_match1_noisy[keypoints1_new_indices] = keypoints0_new_indices[gt_match1_old_idx]
+        return {'keypoints0': keypoints0_noisy, 'keypoints1': keypoints1_noisy, 'gt_match0': gt_match0_noisy,
+                'gt_match1': gt_match1_noisy}
+
+    def _add_noisy_keypoints(self, annotated_kps: np.array, gt_match: np.array,
+                             annotated_kps_indices: np.array) -> dict:
+        # TODO: switch between adding random keypoints, SIFT or other keypoints!
 
         # Generate random keypoints
-        #TODO: get approx nadir from data
+        # TODO: get approx nadir from data
         approx_nadir = 150
-        random_bin_nbr = np.random.randint(low=approx_nadir, high=self.image_width, size=self.num_output_kps)
-        random_ping_nbr = np.random.randint(low=0, high=self.image_height, size=self.num_output_kps)
+        random_bin_nbr = np.random.randint(low=approx_nadir, high=self.image_width, size=self.num_kps)
+        random_ping_nbr = np.random.randint(low=0, high=self.image_height, size=self.num_kps)
         noisy_kps = np.stack([random_bin_nbr, random_ping_nbr]).T
 
         # Place annotated_kps at randomly generated indices in the output noisy_kps array
         noisy_kps[annotated_kps_indices, :] = annotated_kps
-        return noisy_kps
+
+        # Update gt_match to correspond to noisy_kps
+        noisy_gt_match = np.ones(self.num_kps) * NO_MATCH
+        noisy_gt_match[annotated_kps_indices] = gt_match
+        return {'noisy_kps': noisy_kps, 'noisy_gt_match': noisy_gt_match}
 
     def _generate_random_idx_for_annotated_kps(self, num_annotated_kps: int) -> np.array:
-        return np.random.choice(self.num_output_kps, size=num_annotated_kps, replace=False)
+        return np.random.choice(self.num_kps, size=num_annotated_kps, replace=False)
 
 
 def get_matching_keypoints_according_to_matches(matches, keypoints0, keypoints1):
     """Given the proposed matches and two keypoint arrays, return two arrays of keypoints, where matching_kps0[i] is
     the corresponding keypoints to matching_kps1[i] according to the input matches array (which could be groundtruth
-    or predictions."""
+    or predictions)."""
     kps0_idx = torch.where(matches > NO_MATCH)
     matching_kps0 = keypoints0[kps0_idx]
 
