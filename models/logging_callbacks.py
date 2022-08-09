@@ -92,6 +92,6 @@ class LogImagesCallback(pl.Callback):
                                             show_keypoints=True
                                             ) for key, val in matches.items()],
             caption=[
-                f'{key} patches({batch["patch_id0"][0]}, {batch["patch_id1"][0]}) '
+                f'{key} patches({batch["idx0"][0]}, {batch["idx1"][0]}) '
                 f'nbr_matches = {len(val["mkpts0"])}' for key, val in matches.items()]
         )

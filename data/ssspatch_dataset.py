@@ -24,7 +24,7 @@ class SSSPatchDataset(Dataset):
         self.img_type = img_type
         self.patch_root = os.path.join(self.root,
                                        'train' if self.train else 'test')
-        self.desc_dir = os.path.join(self.patch_root, self.desc)
+        self.npz_folder = os.path.join(self.patch_root, 'npz')
         self.num_kps = num_kps
         self.image_width, self.image_height = None, None
 
@@ -33,7 +33,7 @@ class SSSPatchDataset(Dataset):
         self.overlap_percentage_matrix, self.overlap_nbr_kps_matrix = self._load_overlap_matrices(
         )
         self.pairs_above_min_overlap_percentage = np.argwhere(
-            self.overlap_percentage_matrix > self.min_overlap_percentage)
+            self.overlap_percentage_matrix > self.min_overlap_percentage).astype(int)
 
         self.transform = transform
 
@@ -50,59 +50,17 @@ class SSSPatchDataset(Dataset):
         overlap_nbr_kps = np.triu(overlap_info['overlap_nbr_kps'])
         return overlap_percentage, overlap_nbr_kps
 
-    def __len__(self) -> int:
-        return self.pairs_above_min_overlap_percentage.shape[0]
-
-    def __getitem__(self, index: int) -> dict:
-        idx0, idx1 = self.pairs_above_min_overlap_percentage[index]
-        print(f'index: {index}, idx0: {idx0}, idx1: {idx1}')
-        desc0, desc1 = self._load_desc(idx0), self._load_desc(idx1)
-        data = {
-            'keypoints0':
-                desc0[f'kp_{self.img_type}'],
-            'descriptors0':
-                desc0[f'desc_{self.img_type}'].T,
-            'scores0':
-                np.ones(desc0[f'kp_{self.img_type}'].shape[0]),
-            'keypoints1':
-                desc1[f'kp_{self.img_type}'],
-            'descriptors1':
-                desc1[f'desc_{self.img_type}'].T,
-            'scores1':
-                np.ones(desc1[f'kp_{self.img_type}'].shape[0]),
-            'gt_match0':
-                np.array(self.overlap_kps_dict[str(idx0)][str(idx1)]),
-            'gt_match1':
-                np.array(self.overlap_kps_dict[str(idx1)][str(idx0)])
-        }
-        data_torch = {k: torch.from_numpy(v).float() for k, v in data.items()}
-        data_torch['patch_id0'] = int(idx0)
-        data_torch['patch_id1'] = int(idx1)
-        data_torch['image0_raw'] = read_image(os.path.join(self.patch_root, f'patch{idx0}_intensity.png'),
-                                              mode=ImageReadMode.RGB)
-        data_torch['image0_norm'] = read_image(os.path.join(self.patch_root, f'patch{idx0}_norm_intensity.png'),
-                                               mode=ImageReadMode.RGB)
-        data_torch['image1_raw'] = read_image(os.path.join(self.patch_root, f'patch{idx1}_intensity.png'),
-                                              mode=ImageReadMode.RGB)
-        data_torch['image1_norm'] = read_image(os.path.join(self.patch_root, f'patch{idx1}_norm_intensity.png'),
-                                               mode=ImageReadMode.RGB)
-        if self.image_width is None:
-            _, self.image_height, self.image_width = data_torch['image0_norm'].shape
-        return data_torch
-
-    def _load_desc(self, index: int):
-        desc_path = os.path.join(self.desc_dir, f'patch{index}.npz')
-        return np.load(desc_path)
-
-    def _add_noisy_keypoints_and_modify_gt_match(self, raw_data):
+    def _add_noisy_keypoints_and_modify_noisy_gt_match(self, raw_data) -> dict:
         # Add noisy keypoints to image0 data
         keypoints0_new_indices = self._generate_random_idx_for_annotated_kps(raw_data['keypoints0'].shape[0])
-        keypoints0_noisy, gt_match0_noisy = self._add_noisy_keypoints(raw_data['keypoints0'], raw_data['gt_match0'],
+        keypoints0_noisy, gt_match0_noisy = self._add_noisy_keypoints(raw_data['keypoints0'],
+                                                                      raw_data['gt_match0'],
                                                                       keypoints0_new_indices)
 
         # Add noisy keypoints to image1 data
         keypoints1_new_indices = self._generate_random_idx_for_annotated_kps(raw_data['keypoints1'].shape[0])
-        keypoints1_noisy, gt_match1_noisy = self._add_noisy_keypoints(raw_data['keypoints1'], raw_data['gt_match1'],
+        keypoints1_noisy, gt_match1_noisy = self._add_noisy_keypoints(raw_data['keypoints1'],
+                                                                      raw_data['gt_match1'],
                                                                       keypoints1_new_indices)
 
         # Modify the indices in gt_match0_noisy and gt_match1_noisy to correspond to the noisy keypoint indices
@@ -111,8 +69,9 @@ class SSSPatchDataset(Dataset):
 
         gt_match1_old_idx = gt_match1_noisy[keypoints1_new_indices]
         gt_match1_noisy[keypoints1_new_indices] = keypoints0_new_indices[gt_match1_old_idx]
-        return {'keypoints0': keypoints0_noisy, 'keypoints1': keypoints1_noisy, 'gt_match0': gt_match0_noisy,
-                'gt_match1': gt_match1_noisy}
+        return {'noisy_keypoints0': keypoints0_noisy, 'noisy_keypoints1': keypoints1_noisy,
+                'noisy_gt_match0': gt_match0_noisy,
+                'noisy_gt_match1': gt_match1_noisy}
 
     def _add_noisy_keypoints(self, annotated_kps: np.array, gt_match: np.array,
                              annotated_kps_indices: np.array) -> dict:
@@ -135,6 +94,27 @@ class SSSPatchDataset(Dataset):
 
     def _generate_random_idx_for_annotated_kps(self, num_annotated_kps: int) -> np.array:
         return np.random.choice(self.num_kps, size=num_annotated_kps, replace=False)
+
+    def _load_patch(self, index: int):
+        return np.load(os.path.join(self.npz_folder, f'{index}.npz'))
+
+    def __len__(self) -> int:
+        return self.pairs_above_min_overlap_percentage.shape[0]
+
+    def __getitem__(self, index: int) -> dict:
+        idx0, idx1 = self.pairs_above_min_overlap_percentage[index]
+        print(f'index: {index}, idx0: {idx0}, idx1: {idx1}')
+        patch0, patch1 = self._load_patch(idx0), self._load_patch(idx1)
+
+        raw_data = {f'{k}0': v for k, v in patch0.items()}
+        raw_data.update({'f{k}1': v for k, v in patch1.items()})
+
+        noisy_keypoints_and_matches = self._add_noisy_keypoints_and_modify_noisy_gt_match(raw_data)
+        raw_data.update(noisy_keypoints_and_matches)
+
+        if self.image_width is None:
+            self.image_height, self.image_width = raw_data['sss_waterfall_image0'].shape
+        return raw_data
 
 
 def get_matching_keypoints_according_to_matches(matches, keypoints0, keypoints1):
