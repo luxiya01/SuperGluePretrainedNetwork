@@ -4,7 +4,6 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torchvision.io import read_image, ImageReadMode
 
 NO_MATCH = -1
 
@@ -107,7 +106,7 @@ class SSSPatchDataset(Dataset):
         patch0, patch1 = self._load_patch(idx0), self._load_patch(idx1)
 
         raw_data = {f'{k}0': v for k, v in patch0.items()}
-        raw_data.update({'f{k}1': v for k, v in patch1.items()})
+        raw_data.update({f'{k}1': v for k, v in patch1.items()})
 
         noisy_keypoints_and_matches = self._add_noisy_keypoints_and_modify_noisy_gt_match(raw_data)
         raw_data.update(noisy_keypoints_and_matches)
