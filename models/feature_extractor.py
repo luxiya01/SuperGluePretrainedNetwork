@@ -17,10 +17,10 @@ class FeatureExtractor(pl.LightningModule):
 
     @staticmethod
     def kps_array_to_local_affine_frames(kps):
-        batch_size, num_kps, _ = kps.shape
-        return feature.laf_from_center_scale_ori(
-            torch.from_numpy(kps).reshape(batch_size, num_kps, 2)
-        )
+        if isinstance(kps, np.ndarray):
+            batch_size, num_kps, _ = kps.shape
+            kps = torch.from_numpy(kps).reshape(batch_size, num_kps, 2)
+        return feature.laf_from_center_scale_ori(kps)
 
     @torch.no_grad()
     def extract_features(self, image: torch.Tensor, kps: torch.Tensor) -> torch.Tensor:
@@ -63,5 +63,3 @@ class HardNetFeatureExtractor(FeatureExtractor):
         """Output feature size fixed to = 128"""
         super(HardNetFeatureExtractor, self).__init__(patch_size_for_feature=32)
         self.descriptor = feature.HardNet(pretrained=pretrained)
-
-

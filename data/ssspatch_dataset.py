@@ -117,6 +117,9 @@ class SSSPatchDataset(Dataset):
                           }
         processed_data = {**raw_patch_info, **noisy_keypoints_and_matches}
         data_torch = {k: torch.from_numpy(v).float() for k, v in processed_data.items()}
+        # Modify image dimension: H x W -> 1 x H x W
+        data_torch['sss_waterfall_image0'] = data_torch['sss_waterfall_image0'].unsqueeze(dim=0)
+        data_torch['sss_waterfall_image1'] = data_torch['sss_waterfall_image1'].unsqueeze(dim=0)
         return data_torch
 
 

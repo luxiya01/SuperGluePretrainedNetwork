@@ -2,15 +2,17 @@ import pytorch_lightning as pl
 import torch
 
 from data.ssspatch_dataset import NO_MATCH
+from .feature_extractor import SIFTFeatureExtractor
 from .superglue import SuperGlue
 
 
 class MatchingTrain(pl.LightningModule):
-    """ Image Matching Frontend (SuperGlue) """
+    """ Image Matching Frontend (various descriptors) + Backend (SuperGlue) """
 
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.descriptor = SIFTFeatureExtractor(patch_size=32)
         self.superglue = SuperGlue(config)
         self.learning_rate = config.learning_rate
 
@@ -39,6 +41,10 @@ class MatchingTrain(pl.LightningModule):
         for k in data:
             if isinstance(data[k], (list, tuple)):
                 data[k] = torch.stack(data[k])
+        data['descriptors0'] = self.descriptor.extract_features(data['sss_waterfall_image0'], data[
+            'noisy_keypoints0'])
+        data['descriptors1'] = self.descriptor.extract_features(data['sss_waterfall_image1'], data[
+            'noisy_keypoints1'])
 
         pred = {**self.superglue(data), **data}
         return pred
