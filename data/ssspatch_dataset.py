@@ -5,13 +5,14 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from models.feature_extractor import SIFTFeatureExtractor
+
 NO_MATCH = -1
 
 
 class SSSPatchDataset(Dataset):
     def __init__(self,
                  root: str,
-                 desc: str,
                  img_type: str,
                  min_overlap_percentage: float = .15,
                  train: bool = True,
@@ -19,7 +20,8 @@ class SSSPatchDataset(Dataset):
                  num_kps: int = None):
         self.root = root
         self.train = train
-        self.desc = desc
+        # TODO: allow for selection of descriptors!
+        self.feature_extractor = SIFTFeatureExtractor()
         self.img_type = img_type
         self.patch_root = os.path.join(self.root,
                                        'train' if self.train else 'test')
@@ -89,10 +91,10 @@ class SSSPatchDataset(Dataset):
         # Update gt_match to correspond to noisy_kps
         noisy_gt_match = np.ones(self.num_kps) * NO_MATCH
         noisy_gt_match[annotated_kps_indices] = gt_match
-        return {'noisy_kps': noisy_kps, 'noisy_gt_match': noisy_gt_match}
+        return noisy_kps.astype(int), noisy_gt_match.astype(int)
 
     def _generate_random_idx_for_annotated_kps(self, num_annotated_kps: int) -> np.array:
-        return np.random.choice(self.num_kps, size=num_annotated_kps, replace=False)
+        return np.random.choice(self.num_kps, size=num_annotated_kps, replace=False).astype(int)
 
     def _load_patch(self, index: int):
         return np.load(os.path.join(self.npz_folder, f'{index}.npz'))
@@ -105,15 +107,26 @@ class SSSPatchDataset(Dataset):
         print(f'index: {index}, idx0: {idx0}, idx1: {idx1}')
         patch0, patch1 = self._load_patch(idx0), self._load_patch(idx1)
 
+        # Add data for individual patches
         raw_data = {f'{k}0': v for k, v in patch0.items()}
         raw_data.update({f'{k}1': v for k, v in patch1.items()})
+        # Add data on gt_matches
+        raw_data['gt_match0'] = np.array(self.overlap_kps_dict[str(idx0)][str(idx1)])
+        raw_data['gt_match1'] = np.array(self.overlap_kps_dict[str(idx1)][str(idx0)])
+
+        if self.image_width is None:
+            self.image_height, self.image_width = raw_data['sss_waterfall_image0'].shape
 
         noisy_keypoints_and_matches = self._add_noisy_keypoints_and_modify_noisy_gt_match(raw_data)
         raw_data.update(noisy_keypoints_and_matches)
 
-        if self.image_width is None:
-            self.image_height, self.image_width = raw_data['sss_waterfall_image0'].shape
-        return raw_data
+        raw_data['descriptors0'] = self.feature_extractor.extract_features(raw_data['sss_waterfall_image0'],
+                                                                           raw_data['keypoints0'])
+        self.feature_extractor.show_features(raw_data['descriptors0'])
+        raw_data['descriptors1'] = self.feature_extractor.extract_features(raw_data['sss_waterfall_image1'],
+                                                                           raw_data['keypoints1'])
+        data_torch = {k: torch.from_numpy(v).float() for k, v in raw_data.items()}
+        return data_torch
 
 
 def get_matching_keypoints_according_to_matches(matches, keypoints0, keypoints1):
