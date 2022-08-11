@@ -19,6 +19,7 @@ parser = Trainer.add_argparse_args(parser)
 args = parser.parse_args(
     ['--descriptor_dim', '128',
      '--data_num_kps', '200',
+     '--data_batch_size', '2',
      '--data_root',
      '/home/li/Documents/sss-correspondence/data/GullmarsfjordSMaRC20210209_ssh_annotations/survey2_better_resolution/9-0169to0182-nbr_pings-1301_annotated/patch240_step40_test0.1_refSSH-0170_OrderedDict/',
      '--data_num_workers', '0'])

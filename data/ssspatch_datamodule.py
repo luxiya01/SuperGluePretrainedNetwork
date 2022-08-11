@@ -15,9 +15,7 @@ class SSSPatchDataModule(pl.LightningDataModule):
                  config):
         super().__init__()
         self.root = config.data_root
-        # TODO: allow for selection of descriptors!
         self.num_kps = config.data_num_kps
-        self.img_type = config.data_img_type
         self.min_overlap = config.data_min_overlap
         self.eval_split = config.data_eval_split
         self.batch_size = config.data_batch_size
@@ -29,7 +27,6 @@ class SSSPatchDataModule(pl.LightningDataModule):
         parser = parent_parser.add_argument_group('SSSPatchDataModule')
         parser.add_argument('--data_root', type=str, default='')
         parser.add_argument('--data_num_kps', type=int, default=100)
-        parser.add_argument('--data_img_type', type=str, default='norm')
         parser.add_argument('--data_min_overlap', type=float, default=.15)
         parser.add_argument('--data_eval_split', type=float, default=.1)
         parser.add_argument('--data_batch_size', type=int, default=1)
@@ -39,7 +36,7 @@ class SSSPatchDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None) -> None:
         # Set up train and validation datasets
         # TODO: change train to train patches!
-        ssspatch_train_full = SSSPatchDataset(root=self.root, img_type=self.img_type, num_kps=self.num_kps,
+        ssspatch_train_full = SSSPatchDataset(root=self.root,  num_kps=self.num_kps,
                                               min_overlap_percentage=self.min_overlap, train=False)
         ssspatch_train_full_len = len(ssspatch_train_full)
         val_len = int(ssspatch_train_full_len * self.eval_split)
@@ -50,7 +47,7 @@ class SSSPatchDataModule(pl.LightningDataModule):
 
         # Set up test dataset
         self.ssspatch_test = SSSPatchDataset(root=self.root,
-                                             img_type=self.img_type, num_kps=self.num_kps,
+                                             num_kps=self.num_kps,
                                              min_overlap_percentage=self.min_overlap, train=False)
 
     def train_dataloader(self):
