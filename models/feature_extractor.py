@@ -1,26 +1,29 @@
 import pytorch_lightning as pl
 import torch
-from torch import nn
 from kornia import feature
 
 
 class FeatureExtractor(pl.LightningModule):
-    """Class used to extract various features from an input image"""
+    """Class used to extract various features from an input image at given keypoint locations."""
 
-    def __init__(self, batch_size: int, num_kps: int, patch_size_for_feature: int = 32):
+    def __init__(self, descriptor: pl.LightningModule, patch_size_for_feature: int):
         self.patch_size_for_feature = patch_size_for_feature
-        self.kps_to_local_affine_frames = lambda kps: feature.laf_from_center_scale_ori(
+        self.descriptor = descriptor
+
+    @staticmethod
+    def kps_array_to_local_affine_frames(kps):
+        batch_size, num_kps, _ = kps.shape
+        return feature.laf_from_center_scale_ori(
             torch.from_numpy(kps).reshape(batch_size, num_kps, 2)
         )
 
-    def compute_features_using_kornia(self, image: torch.Tensor, kps: torch.Tensor, desc_algo: nn.Module,
-                                      **kwargs) -> torch.Tensor:
-        with torch.no_grad():
-            local_affine_frames = self.kps_to_local_affine_frames(kps)
-            features = feature.get_laf_descriptors(
-                image,
-                kps,
-                patch_descriptor=desc_algo(**kwargs),
-                patch_size=self.patch_size_for_feature
-            )
-            return features
+    @torch.no_grad()
+    def extract_features(self, image: torch.Tensor, kps: torch.Tensor) -> torch.Tensor:
+        local_affine_frames = self.kps_to_local_affine_frames(kps)
+        features = feature.get_laf_descriptors(
+            image,
+            lafs=local_affine_frames,
+            patch_descriptor=self.descriptor,
+            patch_size=self.patch_size_for_feature
+        )
+        return features
