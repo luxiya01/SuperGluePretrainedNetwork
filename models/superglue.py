@@ -82,6 +82,8 @@ class KeypointEncoder(nn.Module):
         nn.init.constant_(self.encoder[-1].bias, 0.0)
 
     def forward(self, kpts, scores):
+        # kpts.shape: (batch_size, num_kps, 2)
+        # scores shape: (batch_size, num_kps)
         inputs = [kpts.transpose(1, 2), scores.unsqueeze(1)]
         inputs = torch.cat(inputs, dim=1)
         res = self.encoder(inputs)
@@ -221,7 +223,6 @@ class SuperGlue(nn.Module):
         """Run SuperGlue on a pair of keypoints and descriptors"""
         # desc shape: (batch_size, desc_dim, num_kps)
         # kpts shape: (batch_size, num_kps, 2)
-        # scores shape: (batch_size, num_kps0 + 1, num_kps1 + 1)
 
         desc0, desc1 = data['descriptors0'], data['descriptors1']
         kpts0, kpts1 = data['noisy_keypoints0'], data['noisy_keypoints1']
@@ -242,8 +243,8 @@ class SuperGlue(nn.Module):
 
         # Keypoint MLP encoder.
         # print(f'desc0: {desc0.shape}, kpts0: {kpts0.shape}, scores0: {data["scores0"].shape}')
-        desc0 = desc0 + self.kenc(kpts0, data['scores0'])
-        desc1 = desc1 + self.kenc(kpts1, data['scores1'])
+        desc0 = desc0 + self.kenc(kpts0, data['noisy_scores0'])
+        desc1 = desc1 + self.kenc(kpts1, data['noisy_scores1'])
 
         # Multi-layer Transformer network.
         desc0, desc1 = self.gnn(desc0, desc1)

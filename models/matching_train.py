@@ -12,6 +12,7 @@ class MatchingTrain(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        # TODO: allow changing descriptors
         self.descriptor = SIFTFeatureExtractor(patch_size=32)
         self.superglue = SuperGlue(config)
         self.learning_rate = config.learning_rate
@@ -34,17 +35,17 @@ class MatchingTrain(pl.LightningModule):
         """ Run SuperGlue on input data
         Args:
           data: dictionary with keys: [
-          'keypoints0', 'keypoints1', 'descriptors0', 'descriptors1',
-          'scores0', 'scores1']
+          'idx0', 'sss_waterfall_image0', 'noisy_keypoints0', 'noisy_gt_match0',
+          'idx1', 'sss_waterfall_image1', 'noisy_keypoints1', 'noisy_gt_match1']
         """
 
         for k in data:
             if isinstance(data[k], (list, tuple)):
                 data[k] = torch.stack(data[k])
         data['descriptors0'] = self.descriptor.extract_features(data['sss_waterfall_image0'], data[
-            'noisy_keypoints0'])
+            'noisy_keypoints0']).transpose(1, 2)
         data['descriptors1'] = self.descriptor.extract_features(data['sss_waterfall_image1'], data[
-            'noisy_keypoints1'])
+            'noisy_keypoints1']).transpose(1, 2)
 
         pred = {**self.superglue(data), **data}
         return pred

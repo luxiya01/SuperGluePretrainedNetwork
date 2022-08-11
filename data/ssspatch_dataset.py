@@ -48,15 +48,15 @@ class SSSPatchDataset(Dataset):
     def _add_noisy_keypoints_and_modify_noisy_gt_match(self, data) -> dict:
         # Add noisy keypoints to image0 data
         keypoints0_new_indices = self._generate_random_idx_for_annotated_kps(data['keypoints0'].shape[0])
-        keypoints0_noisy, gt_match0_noisy = self._add_noisy_keypoints(data['keypoints0'],
-                                                                      data['gt_match0'],
-                                                                      keypoints0_new_indices)
+        keypoints0_noisy, gt_match0_noisy, scores0_noisy = self._add_noisy_keypoints(data['keypoints0'],
+                                                                                     data['gt_match0'],
+                                                                                     keypoints0_new_indices)
 
         # Add noisy keypoints to image1 data
         keypoints1_new_indices = self._generate_random_idx_for_annotated_kps(data['keypoints1'].shape[0])
-        keypoints1_noisy, gt_match1_noisy = self._add_noisy_keypoints(data['keypoints1'],
-                                                                      data['gt_match1'],
-                                                                      keypoints1_new_indices)
+        keypoints1_noisy, gt_match1_noisy, scores1_noisy = self._add_noisy_keypoints(data['keypoints1'],
+                                                                                     data['gt_match1'],
+                                                                                     keypoints1_new_indices)
 
         # Modify the indices in gt_match0_noisy and gt_match1_noisy to correspond to the noisy keypoint indices
         gt_match0_old_idx = gt_match0_noisy[keypoints0_new_indices]
@@ -65,11 +65,11 @@ class SSSPatchDataset(Dataset):
         gt_match1_old_idx = gt_match1_noisy[keypoints1_new_indices]
         gt_match1_noisy[keypoints1_new_indices] = keypoints0_new_indices[gt_match1_old_idx]
         return {'noisy_keypoints0': keypoints0_noisy, 'noisy_keypoints1': keypoints1_noisy,
-                'noisy_gt_match0': gt_match0_noisy,
-                'noisy_gt_match1': gt_match1_noisy}
+                'noisy_gt_match0': gt_match0_noisy, 'noisy_gt_match1': gt_match1_noisy,
+                'noisy_scores0': scores0_noisy, 'noisy_scores1': scores1_noisy}
 
     def _add_noisy_keypoints(self, annotated_kps: np.array, gt_match: np.array,
-                             annotated_kps_indices: np.array) -> dict:
+                             annotated_kps_indices: np.array) -> (np.array, np.array, np.array):
         # TODO: switch between adding random keypoints, SIFT or other keypoints!
 
         # Generate random keypoints
@@ -82,10 +82,14 @@ class SSSPatchDataset(Dataset):
         # Place annotated_kps at randomly generated indices in the output noisy_kps array
         noisy_kps[annotated_kps_indices, :] = annotated_kps
 
+        # Generate detection confidence score for keypoints (random for random kps, 1 for annotated kps)
+        noisy_scores = np.random.random(self.num_kps)
+        noisy_scores[annotated_kps_indices] = 1
+
         # Update gt_match to correspond to noisy_kps
         noisy_gt_match = np.ones(self.num_kps) * NO_MATCH
         noisy_gt_match[annotated_kps_indices] = gt_match
-        return noisy_kps.astype(int), noisy_gt_match.astype(int)
+        return noisy_kps.astype(int), noisy_gt_match.astype(int), noisy_scores.astype(float)
 
     def _generate_random_idx_for_annotated_kps(self, num_annotated_kps: int) -> np.array:
         # TODO: handle the case where num_annotated_kps > self.num_kps (random sample up to self.num_kps?)
@@ -111,7 +115,7 @@ class SSSPatchDataset(Dataset):
                                      'gt_match1': np.array(self.overlap_kps_dict[str(idx1)][str(idx0)])}
         noisy_keypoints_and_matches = self._add_noisy_keypoints_and_modify_noisy_gt_match(raw_keypoints_and_matches)
 
-        basic_patch_info_keys = ['idx', 'pos', 'rpy', 'sss_waterfall_image']
+        basic_patch_info_keys = ['idx', 'sss_waterfall_image']
         raw_patch_info = {**{f'{k}0': patch0[k] for k in basic_patch_info_keys},
                           **{f'{k}1': patch1[k] for k in basic_patch_info_keys}
                           }

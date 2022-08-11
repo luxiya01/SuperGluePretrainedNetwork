@@ -24,6 +24,7 @@ class FeatureExtractor(pl.LightningModule):
 
     @torch.no_grad()
     def extract_features(self, image: torch.Tensor, kps: torch.Tensor) -> torch.Tensor:
+        """Returns features with shape (batch_size, num_kps, descriptor_size)"""
         local_affine_frames = self.kps_array_to_local_affine_frames(kps)
         features = feature.get_laf_descriptors(
             image,
