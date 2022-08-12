@@ -87,40 +87,35 @@ class MatchingTrain(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         return optimizer
 
-    def gt_to_array_with_and_without_matches(self, gt_list):
-        # convert gt list to a torch tensor with shape (batch_size, num_kps, 2)
-        # and then split the array into two based on whether the kp has GT correspondence
-        # the returned two arrays both have shape (num_kps, 2)
-
-        # TODO: handle batch_size > 1
-        gt_array = torch.stack(
-            (torch.arange(gt_list.shape[1]).unsqueeze(0).to(self.device), gt_list.clone().detach()),
-            axis=2).long()
-        gt_with_matches = gt_array[torch.where(gt_array[:, :, 1] != -1)]
-        gt_without_matches = gt_array[torch.where(gt_array[:, :, 1] == -1)]
-        return gt_with_matches, gt_without_matches
-
     def compute_loss(self, pred_scores, batch):
-        gt0_with_matches, gt0_no_matches = self.gt_to_array_with_and_without_matches(
-            batch['gt_match0'])
-        gt1_with_matches, gt1_no_matches = self.gt_to_array_with_and_without_matches(
-            batch['gt_match1'])
+        batch_gt0_with_match, kps_gt0_with_match = torch.where(batch['noisy_gt_match0'] != NO_MATCH)
+        corresponding_gt1_match = batch['noisy_gt_match0'][batch_gt0_with_match, kps_gt0_with_match].to(int)
+
+        batch_gt0_no_match, kps_gt0_no_match = torch.where(batch['noisy_gt_match0'] == NO_MATCH)
+        batch_gt1_no_match, kps_gt1_no_match = torch.where(batch['noisy_gt_match1'] == NO_MATCH)
 
         # loss from GT matches
-        loss = -pred_scores[:, gt0_with_matches[:, 0], gt0_with_matches[:, 1]].sum()
+        pred_score_elems_with_match = pred_scores[batch_gt0_with_match, kps_gt0_with_match, corresponding_gt1_match]
+        _, counts = torch.unique(batch_gt0_with_match, return_counts=True)
+        weights = 1/counts[batch_gt0_with_match]
+        loss = (weights*pred_score_elems_with_match).sum()
+
         # loss from kps from image0 without matches (matches to dust_bin with col idx = -1)
-        loss -= pred_scores[:, gt0_no_matches[:, 0], gt0_no_matches[:,
-                                                     1]].sum()
+        _, counts = torch.unique(batch_gt0_no_match, return_counts=True)
+        weights = 1/counts[batch_gt0_no_match]
+        loss -= (weights*pred_scores[batch_gt0_no_match, kps_gt0_no_match, -1]).sum()
+
         # loss from kps from image1 without matches (matches to dust_bin with row idx = -1)
-        loss -= pred_scores[:, gt1_no_matches[:, 1], gt1_no_matches[:,
-                                                     0]].sum()
-        nbr_matches = gt0_with_matches.shape[0] + gt0_no_matches.shape[
-            0] + gt1_no_matches.shape[0]
-        loss = loss / nbr_matches
-        return loss
+        _, counts = torch.unique(batch_gt1_no_match, return_counts=True)
+        weights = 1/counts[batch_gt1_no_match]
+        loss -= (weights*pred_scores[batch_gt1_no_match, -1, kps_gt1_no_match]).sum()
+
+        batch_size = pred_scores.shape[0]
+        return loss/batch_size
 
     @staticmethod
     def compute_metrics(pred):
+        #TODO: update this function for larger batches!
         predictions = torch.concat([pred['matches0'], pred['matches1']], dim=1).flatten()
         gt = torch.concat([pred['gt_match0'], pred['gt_match1']], dim=1).flatten()
 

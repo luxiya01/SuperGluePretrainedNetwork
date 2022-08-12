@@ -9,7 +9,7 @@ from data.ssspatch_datamodule import SSSPatchDataModule
 from models.logging_callbacks import LogImagesCallback
 from models.matching_train import MatchingTrain
 
-run_name = '220811_feat_extraction_test'
+run_name = '220812_batch_loss'
 wandb_logger = WandbLogger(project='sss-corr', name=run_name, log_model='all')
 
 parser = ArgumentParser()
