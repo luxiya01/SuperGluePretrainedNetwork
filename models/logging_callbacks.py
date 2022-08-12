@@ -81,7 +81,7 @@ class LogImagesCallback(pl.Callback):
     def _log_matches(trainer: "pl.Trainer", batch: Any, matches: dict, stage: str = 'val'):
         trainer.logger.log_image(
             key=f'{stage}/matches',
-            images=[make_matching_plot_fast(batch['image0'][0][0].cpu(), batch['image1'][0][0].cpu(),
+            images=[make_matching_plot_fast(batch['image0'][0][0].cpu().numpy(), batch['image1'][0][0].cpu().numpy(),
                                             batch['noisy_keypoints0'][0].cpu().numpy(),
                                             batch['noisy_keypoints1'][0].cpu().numpy(),
                                             val['mkpts0'].cpu().numpy(),
