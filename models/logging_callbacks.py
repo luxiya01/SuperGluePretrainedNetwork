@@ -47,35 +47,36 @@ class LogImagesCallback(pl.Callback):
         self._log_images(trainer, outputs, batch, stage='test')
 
     def _log_images(self, trainer: "pl.Trainer", outputs: Optional[STEP_OUTPUT], batch: Any, stage: str = 'val'):
-        # Log GT matches
-        gt_matching_kps0, gt_matching_kps1 = get_matching_keypoints_according_to_matches(
-            matches=batch['noisy_gt_match0'],
-            keypoints0=batch['noisy_keypoints0'],
-            keypoints1=batch['noisy_keypoints1'])
+        for i in range(batch['idx0'].shape[0]):
+            # Log GT matches
+            gt_matching_kps0, gt_matching_kps1 = get_matching_keypoints_according_to_matches(
+                matches=batch['noisy_gt_match0'][i],
+                keypoints0=batch['noisy_keypoints0'][i],
+                keypoints1=batch['noisy_keypoints1'][i])
 
-        # Log correct predictions
-        correct_pred_matches0 = torch.where(batch['noisy_gt_match0'] == outputs['pred']['matches0'],
-                                            outputs['pred']['matches0'], NO_MATCH)
-        correct_pred_kps0, correct_pred_kps1 = get_matching_keypoints_according_to_matches(
-            matches=correct_pred_matches0,
-            keypoints0=batch['noisy_keypoints0'],
-            keypoints1=batch['noisy_keypoints1'])
+            # Log correct predictions
+            correct_pred_matches0 = torch.where(batch['noisy_gt_match0'][i] == outputs['pred']['matches0'][i],
+                                                outputs['pred']['matches0'][i], NO_MATCH)
+            correct_pred_kps0, correct_pred_kps1 = get_matching_keypoints_according_to_matches(
+                matches=correct_pred_matches0,
+                keypoints0=batch['noisy_keypoints0'][i],
+                keypoints1=batch['noisy_keypoints1'][i])
 
-        # Log incorrect predictions
-        incorrect_pred_matches0 = torch.where(batch['noisy_gt_match0'] != outputs['pred']['matches0'],
-                                              outputs['pred']['matches0'], NO_MATCH)
-        incorrect_pred_kps0, incorrect_pred_kps1 = get_matching_keypoints_according_to_matches(
-            matches=incorrect_pred_matches0,
-            keypoints0=batch['noisy_keypoints0'],
-            keypoints1=batch['noisy_keypoints1'])
+            # Log incorrect predictions
+            incorrect_pred_matches0 = torch.where(batch['noisy_gt_match0'][i] != outputs['pred']['matches0'][i],
+                                                  outputs['pred']['matches0'][i], NO_MATCH)
+            incorrect_pred_kps0, incorrect_pred_kps1 = get_matching_keypoints_according_to_matches(
+                matches=incorrect_pred_matches0,
+                keypoints0=batch['noisy_keypoints0'][i],
+                keypoints1=batch['noisy_keypoints1'][i])
 
-        matches = {'GT': {'mkpts0': gt_matching_kps0, 'mkpts1': gt_matching_kps1, 'color': [0, 1, 1, 1]},
-                   'Incorrect predictions': {'mkpts0': incorrect_pred_kps0, 'mkpts1': incorrect_pred_kps1,
-                                             'color': [0, 0, 1, 1]},
-                   'Correct predictions': {'mkpts0': correct_pred_kps0, 'mkpts1': correct_pred_kps1,
-                                           'color': [0, 1, 0, 1]}
-                   }
-        self._log_matches(trainer, batch, matches, stage=stage)
+            matches = {'GT': {'mkpts0': gt_matching_kps0, 'mkpts1': gt_matching_kps1, 'color': [0, 1, 1, 1]},
+                       'Incorrect predictions': {'mkpts0': incorrect_pred_kps0, 'mkpts1': incorrect_pred_kps1,
+                                                 'color': [0, 0, 1, 1]},
+                       'Correct predictions': {'mkpts0': correct_pred_kps0, 'mkpts1': correct_pred_kps1,
+                                               'color': [0, 1, 0, 1]}
+                       }
+            self._log_matches(trainer, batch, matches, stage=stage)
 
     @staticmethod
     def _log_matches(trainer: "pl.Trainer", batch: Any, matches: dict, stage: str = 'val'):

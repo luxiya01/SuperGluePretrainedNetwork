@@ -134,9 +134,9 @@ def get_matching_keypoints_according_to_matches(matches, keypoints0, keypoints1)
     """Given the proposed matches and two keypoint arrays, return two arrays of keypoints, where matching_kps0[i] is
     the corresponding keypoints to matching_kps1[i] according to the input matches array (which could be groundtruth
     or predictions)."""
-    batch_idx, kps0_idx = torch.where(matches > NO_MATCH)
-    matching_kps0 = keypoints0[batch_idx, kps0_idx]
+    kps0_idx = torch.where(matches > NO_MATCH)
+    matching_kps0 = keypoints0[ kps0_idx]
 
-    kps1_idx = matches[batch_idx, kps0_idx].to(int)
-    matching_kps1 = keypoints1[batch_idx, kps1_idx]
+    kps1_idx = matches[kps0_idx].to(int)
+    matching_kps1 = keypoints1[kps1_idx]
     return matching_kps0, matching_kps1
