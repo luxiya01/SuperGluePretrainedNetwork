@@ -35,9 +35,8 @@ class SSSPatchDataModule(pl.LightningDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
         # Set up train and validation datasets
-        # TODO: change train to train patches!
         ssspatch_train_full = SSSPatchDataset(root=self.root,  num_kps=self.num_kps,
-                                              min_overlap_percentage=self.min_overlap, train=False)
+                                              min_overlap_percentage=self.min_overlap, train=True)
         ssspatch_train_full_len = len(ssspatch_train_full)
         val_len = int(ssspatch_train_full_len * self.eval_split)
         train_len = ssspatch_train_full_len - val_len
