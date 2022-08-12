@@ -97,27 +97,26 @@ class MatchingTrain(pl.LightningModule):
         # loss from GT matches
         pred_score_elems_with_match = pred_scores[batch_gt0_with_match, kps_gt0_with_match, corresponding_gt1_match]
         _, counts = torch.unique(batch_gt0_with_match, return_counts=True)
-        weights = 1/counts[batch_gt0_with_match]
-        loss = (weights*pred_score_elems_with_match).sum()
+        weights = 1 / counts[batch_gt0_with_match]
+        loss = (weights * pred_score_elems_with_match).sum()
 
         # loss from kps from image0 without matches (matches to dust_bin with col idx = -1)
         _, counts = torch.unique(batch_gt0_no_match, return_counts=True)
-        weights = 1/counts[batch_gt0_no_match]
-        loss -= (weights*pred_scores[batch_gt0_no_match, kps_gt0_no_match, -1]).sum()
+        weights = 1 / counts[batch_gt0_no_match]
+        loss -= (weights * pred_scores[batch_gt0_no_match, kps_gt0_no_match, -1]).sum()
 
         # loss from kps from image1 without matches (matches to dust_bin with row idx = -1)
         _, counts = torch.unique(batch_gt1_no_match, return_counts=True)
-        weights = 1/counts[batch_gt1_no_match]
-        loss -= (weights*pred_scores[batch_gt1_no_match, -1, kps_gt1_no_match]).sum()
+        weights = 1 / counts[batch_gt1_no_match]
+        loss -= (weights * pred_scores[batch_gt1_no_match, -1, kps_gt1_no_match]).sum()
 
         batch_size = pred_scores.shape[0]
-        return loss/batch_size
+        return loss / batch_size
 
     @staticmethod
     def compute_metrics(pred):
-        #TODO: update this function for larger batches!
         predictions = torch.concat([pred['matches0'], pred['matches1']], dim=1).flatten()
-        gt = torch.concat([pred['gt_match0'], pred['gt_match1']], dim=1).flatten()
+        gt = torch.concat([pred['noisy_gt_match0'], pred['noisy_gt_match1']], dim=1).flatten()
 
         num_predicted_matches = torch.count_nonzero(predictions != NO_MATCH)
         num_gt_matches = torch.count_nonzero(gt != NO_MATCH)
@@ -126,7 +125,14 @@ class MatchingTrain(pl.LightningModule):
         precision = num_correctly_predicted_matches / num_predicted_matches if num_predicted_matches > 0 else 0
         recall = num_correctly_predicted_matches / num_gt_matches if num_gt_matches > 0 else 0
         matching_score = num_correctly_predicted_matches / predictions.shape[0]
+        # Accuracy includes the accuracy of predicting NO_MATCH and proposing matches
         accuracy = torch.count_nonzero(predictions == gt) / predictions.shape[0]
 
+        batch_size = pred['matches0'].shape[0]
+        # All following metrics are divided by 2 since the matching should be symmetric
+        average_true_positive = num_correctly_predicted_matches / batch_size / 2
+        average_false_positive = (num_predicted_matches - num_correctly_predicted_matches) / batch_size / 2
+        average_proposed_matches = num_predicted_matches / batch_size / 2
+
         return {'precision': precision, 'recall': recall, 'matching_score': matching_score, 'accuracy': accuracy,
-                'TP': num_correctly_predicted_matches, 'FP': num_predicted_matches - num_correctly_predicted_matches}
+                'TP': average_true_positive, 'FP': average_false_positive, 'num_proposed_matches': average_proposed_matches}
