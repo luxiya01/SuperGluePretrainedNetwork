@@ -58,12 +58,11 @@ class SSSPatchDataset(Dataset):
                                                                                      data['gt_match1'],
                                                                                      keypoints1_new_indices)
 
-        # Modify the indices in gt_match0_noisy and gt_match1_noisy to correspond to the noisy keypoint indices
-        gt_match0_old_idx = gt_match0_noisy[keypoints0_new_indices]
-        gt_match0_noisy[keypoints0_new_indices] = keypoints1_new_indices[gt_match0_old_idx]
-
-        gt_match1_old_idx = gt_match1_noisy[keypoints1_new_indices]
-        gt_match1_noisy[keypoints1_new_indices] = keypoints0_new_indices[gt_match1_old_idx]
+        # Update the indices in gt_match0_noisy and gt_match1_noisy to correspond to the noisy keypoint indices
+        gt_match0_noisy = np.where(gt_match0_noisy == NO_MATCH, gt_match0_noisy,
+                                      keypoints1_new_indices[gt_match0_noisy])
+        gt_match1_noisy = np.where(gt_match1_noisy == NO_MATCH, gt_match1_noisy,
+                                      keypoints0_new_indices[gt_match1_noisy])
         return {'noisy_keypoints0': keypoints0_noisy, 'noisy_keypoints1': keypoints1_noisy,
                 'noisy_gt_match0': gt_match0_noisy, 'noisy_gt_match1': gt_match1_noisy,
                 'noisy_scores0': scores0_noisy, 'noisy_scores1': scores1_noisy}
