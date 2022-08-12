@@ -35,16 +35,16 @@ class MatchingTrain(pl.LightningModule):
         """ Run SuperGlue on input data
         Args:
           data: dictionary with keys: [
-          'idx0', 'sss_waterfall_image0', 'noisy_keypoints0', 'noisy_gt_match0',
-          'idx1', 'sss_waterfall_image1', 'noisy_keypoints1', 'noisy_gt_match1']
+          'idx0', 'sss_waterfall_image0', 'image0', 'noisy_keypoints0', 'noisy_gt_match0',
+          'idx1', 'sss_waterfall_image1', 'image1', 'noisy_keypoints1', 'noisy_gt_match1']
         """
 
         for k in data:
             if isinstance(data[k], (list, tuple)):
                 data[k] = torch.stack(data[k])
-        data['descriptors0'] = self.descriptor.extract_features(data['sss_waterfall_image0'], data[
+        data['descriptors0'] = self.descriptor.extract_features(data['image0'], data[
             'noisy_keypoints0']).transpose(1, 2)
-        data['descriptors1'] = self.descriptor.extract_features(data['sss_waterfall_image1'], data[
+        data['descriptors1'] = self.descriptor.extract_features(data['image1'], data[
             'noisy_keypoints1']).transpose(1, 2)
 
         pred = {**self.superglue(data), **data}

@@ -123,6 +123,10 @@ class SSSPatchDataset(Dataset):
         # Modify image dimension: H x W -> 1 x H x W
         data_torch['sss_waterfall_image0'] = data_torch['sss_waterfall_image0'].unsqueeze(dim=0)
         data_torch['sss_waterfall_image1'] = data_torch['sss_waterfall_image1'].unsqueeze(dim=0)
+
+        #TODO: add transforms to images (image0/1 = transformed versions of sss_waterfall_image0/1)
+        data_torch['image0'] = data_torch['sss_waterfall_image0'].detach().clone()
+        data_torch['image1'] = data_torch['sss_waterfall_image1'].detach().clone()
         return data_torch
 
 
