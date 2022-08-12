@@ -49,25 +49,25 @@ class LogImagesCallback(pl.Callback):
     def _log_images(self, trainer: "pl.Trainer", outputs: Optional[STEP_OUTPUT], batch: Any, stage: str = 'val'):
         # Log GT matches
         gt_matching_kps0, gt_matching_kps1 = get_matching_keypoints_according_to_matches(
-            matches=batch['gt_match0'],
-            keypoints0=batch['keypoints0'],
-            keypoints1=batch['keypoints1'])
+            matches=batch['noisy_gt_match0'],
+            keypoints0=batch['noisy_keypoints0'],
+            keypoints1=batch['noisy_keypoints1'])
 
         # Log correct predictions
-        correct_pred_matches0 = torch.where(batch['gt_match0'] == outputs['pred']['matches0'],
+        correct_pred_matches0 = torch.where(batch['noisy_gt_match0'] == outputs['pred']['matches0'],
                                             outputs['pred']['matches0'], NO_MATCH)
         correct_pred_kps0, correct_pred_kps1 = get_matching_keypoints_according_to_matches(
             matches=correct_pred_matches0,
-            keypoints0=batch['keypoints0'],
-            keypoints1=batch['keypoints1'])
+            keypoints0=batch['noisy_keypoints0'],
+            keypoints1=batch['noisy_keypoints1'])
 
         # Log incorrect predictions
-        incorrect_pred_matches0 = torch.where(batch['gt_match0'] != outputs['pred']['matches0'],
+        incorrect_pred_matches0 = torch.where(batch['noisy_gt_match0'] != outputs['pred']['matches0'],
                                               outputs['pred']['matches0'], NO_MATCH)
         incorrect_pred_kps0, incorrect_pred_kps1 = get_matching_keypoints_according_to_matches(
             matches=incorrect_pred_matches0,
-            keypoints0=batch['keypoints0'],
-            keypoints1=batch['keypoints1'])
+            keypoints0=batch['noisy_keypoints0'],
+            keypoints1=batch['noisy_keypoints1'])
 
         matches = {'GT': {'mkpts0': gt_matching_kps0, 'mkpts1': gt_matching_kps1, 'color': [0, 1, 1, 1]},
                    'Incorrect predictions': {'mkpts0': incorrect_pred_kps0, 'mkpts1': incorrect_pred_kps1,
@@ -81,13 +81,13 @@ class LogImagesCallback(pl.Callback):
     def _log_matches(trainer: "pl.Trainer", batch: Any, matches: dict, stage: str = 'val'):
         trainer.logger.log_image(
             key=f'{stage}/matches',
-            images=[make_matching_plot_fast(batch['image0_norm'][0][0].cpu(), batch['image1_norm'][0][0].cpu(),
-                                            batch['keypoints0'][0].cpu().numpy(),
-                                            batch['keypoints1'][0].cpu().numpy(),
+            images=[make_matching_plot_fast(batch['image0'][0][0].cpu(), batch['image1'][0][0].cpu(),
+                                            batch['noisy_keypoints0'][0].cpu().numpy(),
+                                            batch['noisy_keypoints1'][0].cpu().numpy(),
                                             val['mkpts0'].cpu().numpy(),
                                             val['mkpts1'].cpu().numpy(),
                                             # color = (r,g,b,a)
-                                            color=np.tile(val['color'], (batch['keypoints0'].shape[1], 1)),
+                                            color=np.tile(val['color'], (batch['noisy_keypoints0'].shape[1], 1)),
                                             text=key,
                                             show_keypoints=True
                                             ) for key, val in matches.items()],
