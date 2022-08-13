@@ -9,7 +9,7 @@ from data.ssspatch_datamodule import SSSPatchDataModule
 from models.logging_callbacks import LogImagesCallback
 from models.matching_train import MatchingTrain
 
-run_name = '220812_batch_loss'
+run_name = '220813_gt_debug'
 wandb_logger = WandbLogger(project='sss-corr', name=run_name, log_model='all')
 
 parser = ArgumentParser()
@@ -20,9 +20,10 @@ args = parser.parse_args(
     ['--descriptor_dim', '128',
      '--data_num_kps', '200',
      '--data_batch_size', '5',
+     '--matched_loss_weight', '.5',
      '--data_root',
      '/home/li/Documents/sss-correspondence/data/GullmarsfjordSMaRC20210209_ssh_annotations/survey2_better_resolution/9-0169to0182-nbr_pings-1301_annotated/patch240_step40_test0.1_refSSH-0170_OrderedDict/',
-     '--data_num_workers', '0'])
+     '--data_num_workers', '10'])
 
 ssspatch_sift_norm_img = SSSPatchDataModule(args)
 ssspatch_sift_norm_img.setup()
@@ -38,7 +39,7 @@ checkpoint_callback = ModelCheckpoint(monitor='val/loss',
 trainer = Trainer(logger=wandb_logger, max_epochs=2,
                   callbacks=[LogImagesCallback(),
                              early_stopping_callback],
-                  accelerator='cpu',
+                  accelerator='gpu',
                   devices=1,
                   gradient_clip_val=.5,
                   detect_anomaly=True)

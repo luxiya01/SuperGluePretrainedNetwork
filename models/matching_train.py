@@ -16,6 +16,7 @@ class MatchingTrain(pl.LightningModule):
         self.descriptor = SIFTFeatureExtractor(patch_size=32)
         self.superglue = SuperGlue(config)
         self.learning_rate = config.learning_rate
+        self.matched_loss_weight = config.matched_loss_weight
 
         self.save_hyperparameters()
         print(self.hparams)
@@ -29,6 +30,7 @@ class MatchingTrain(pl.LightningModule):
         parser.add_argument('--sinkhorn_iterations', type=int, default=100)
         parser.add_argument('--match_threshold', type=float, default=0.2)
         parser.add_argument('--learning_rate', type=float, default=1e-4)
+        parser.add_argument('--matched_loss_weight', type=float, default=.5)
         return parent_parser
 
     def forward(self, data):
@@ -98,20 +100,21 @@ class MatchingTrain(pl.LightningModule):
         pred_score_elems_with_match = pred_scores[batch_gt0_with_match, kps_gt0_with_match, corresponding_gt1_match]
         _, inverse_index, counts = torch.unique(batch_gt0_with_match, return_inverse=True, return_counts=True)
         weights = 1 / counts[inverse_index]
-        loss = - (weights * pred_score_elems_with_match).sum()
+        matched_loss = - (weights * pred_score_elems_with_match).sum()
 
         # loss from kps from image0 without matches (matches to dust_bin with col idx = -1)
         _, inverse_index, counts = torch.unique(batch_gt0_no_match, return_inverse=True, return_counts=True)
         weights = 1 / counts[batch_gt0_no_match]
-        loss -= (weights * pred_scores[batch_gt0_no_match, kps_gt0_no_match, -1]).sum()
+        unmatched_loss = 0.5 * - (weights * pred_scores[batch_gt0_no_match, kps_gt0_no_match, -1]).sum()
 
         # loss from kps from image1 without matches (matches to dust_bin with row idx = -1)
         _, inverse_index, counts = torch.unique(batch_gt1_no_match, return_inverse=True, return_counts=True)
         weights = 1 / counts[batch_gt1_no_match]
-        loss -= (weights * pred_scores[batch_gt1_no_match, -1, kps_gt1_no_match]).sum()
+        unmatched_loss -= 0.5 * (weights * pred_scores[batch_gt1_no_match, -1, kps_gt1_no_match]).sum()
 
         batch_size = pred_scores.shape[0]
-        return loss / batch_size
+        loss = (self.matched_loss_weight * matched_loss + (1 - self.matched_loss_weight) * unmatched_loss) / batch_size
+        return loss
 
     @staticmethod
     def compute_metrics(pred):
@@ -135,4 +138,5 @@ class MatchingTrain(pl.LightningModule):
         average_proposed_matches = num_predicted_matches / batch_size / 2
 
         return {'precision': precision, 'recall': recall, 'matching_score': matching_score, 'accuracy': accuracy,
-                'TP': average_true_positive, 'FP': average_false_positive, 'num_proposed_matches': average_proposed_matches}
+                'TP': average_true_positive, 'FP': average_false_positive,
+                'num_proposed_matches': average_proposed_matches}
