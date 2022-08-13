@@ -76,23 +76,25 @@ class LogImagesCallback(pl.Callback):
                        'Correct predictions': {'mkpts0': correct_pred_kps0, 'mkpts1': correct_pred_kps1,
                                                'color': [0, 1, 0, 1]}
                        }
-            self._log_matches(trainer, batch, matches, stage=stage)
+            self._log_matches(trainer, batch, matches, idx_in_batch=i, stage=stage)
 
     @staticmethod
-    def _log_matches(trainer: "pl.Trainer", batch: Any, matches: dict, stage: str = 'val'):
+    def _log_matches(trainer: "pl.Trainer", batch: Any, matches: dict, idx_in_batch: int, stage: str = 'val'):
         trainer.logger.log_image(
             key=f'{stage}/matches',
-            images=[make_matching_plot_fast(batch['image0'][0][0].cpu().numpy(), batch['image1'][0][0].cpu().numpy(),
-                                            batch['noisy_keypoints0'][0].cpu().numpy(),
-                                            batch['noisy_keypoints1'][0].cpu().numpy(),
+            images=[make_matching_plot_fast(batch['image0'][idx_in_batch][0].cpu().numpy(), batch['image1'][idx_in_batch][0].cpu().numpy(),
+                                            batch['noisy_keypoints0'][idx_in_batch].cpu().numpy(),
+                                            batch['noisy_keypoints1'][idx_in_batch].cpu().numpy(),
                                             val['mkpts0'].cpu().numpy(),
                                             val['mkpts1'].cpu().numpy(),
                                             # color = (r,g,b,a)
-                                            color=np.tile(val['color'], (batch['noisy_keypoints0'].shape[1], 1)),
+                                            color=np.tile(val['color'], (val['mkpts0'].shape[0], 1)),
                                             text=key,
-                                            show_keypoints=True
+                                            show_keypoints=True,
+                                            is_noisy_kpts0=batch['is_noisy_keypoints0'][idx_in_batch].cpu().numpy(),
+                                            is_noisy_kpts1=batch['is_noisy_keypoints1'][idx_in_batch].cpu().numpy()
                                             ) for key, val in matches.items()],
             caption=[
-                f'{key} patches({batch["idx0"][0]}, {batch["idx1"][0]}) '
+                f'{key} patches({batch["idx0"][idx_in_batch]}, {batch["idx1"][idx_in_batch]}) '
                 f'nbr_matches = {len(val["mkpts0"])}' for key, val in matches.items()]
         )
