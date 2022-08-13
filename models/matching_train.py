@@ -98,7 +98,7 @@ class MatchingTrain(pl.LightningModule):
         pred_score_elems_with_match = pred_scores[batch_gt0_with_match, kps_gt0_with_match, corresponding_gt1_match]
         _, inverse_index, counts = torch.unique(batch_gt0_with_match, return_inverse=True, return_counts=True)
         weights = 1 / counts[inverse_index]
-        loss = (weights * pred_score_elems_with_match).sum()
+        loss = - (weights * pred_score_elems_with_match).sum()
 
         # loss from kps from image0 without matches (matches to dust_bin with col idx = -1)
         _, inverse_index, counts = torch.unique(batch_gt0_no_match, return_inverse=True, return_counts=True)
