@@ -93,7 +93,7 @@ class SSSPatchDataset(Dataset):
     def _choose_keypoints(self, annotated_kps: np.array, gt_match: np.array,
                           selected_indices: np.array) -> dict:
         noisy_kps = annotated_kps[selected_indices, :]
-        noisy_gt_match = gt_match[selected_indices, :]
+        noisy_gt_match = gt_match[selected_indices]
         is_noisy = np.zeros_like(noisy_gt_match)
         noisy_scores = np.ones_like(noisy_gt_match)
         return {'noisy_kps': noisy_kps, 'noisy_gt_match': noisy_gt_match, 'is_noisy_kps': is_noisy,
@@ -141,7 +141,7 @@ class SSSPatchDataset(Dataset):
         if add_kps:
             new_idx = np.random.choice(self.num_kps, size=num_annotated_kps, replace=False).astype(int)
         else:
-            new_idx = random.choice(num_annotated_kps, size=self.num_kps, replace=False).astype(int)
+            new_idx = np.random.choice(num_annotated_kps, size=self.num_kps, replace=False).astype(int)
         return new_idx, add_kps
 
     def _load_patch(self, index: int):

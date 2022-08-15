@@ -18,7 +18,7 @@ parser = SSSPatchDataModule.add_model_specific_args(parser)
 parser = Trainer.add_argparse_args(parser)
 args = parser.parse_args(
     ['--descriptor_dim', '128',
-     '--data_num_kps', '3',
+     '--data_num_kps', '50',
      '--data_batch_size', '1',
      '--matched_loss_weight', '.5',
      '--data_root',
