@@ -1,5 +1,6 @@
 import json
 import os
+import random
 
 import numpy as np
 import torch
@@ -47,24 +48,27 @@ class SSSPatchDataset(Dataset):
 
     def _add_noisy_keypoints_and_modify_noisy_gt_match(self, data) -> dict:
         # Add noisy keypoints to image0 data
-        keypoints0_new_indices = self._generate_random_idx_for_annotated_kps(data['keypoints0'].shape[0])
-        noisy_kps0_dict = self._add_noisy_keypoints(data['keypoints0'],
-                                                    data['gt_match0'],
-                                                    keypoints0_new_indices)
+        keypoints0_new_indices, add_kps0 = self._generate_random_idx_for_annotated_kps(data['keypoints0'].shape[0])
+        if add_kps0:
+            noisy_kps0_dict = self._add_noisy_keypoints(data['keypoints0'],
+                                                        data['gt_match0'],
+                                                        keypoints0_new_indices)
+        else:
+            noisy_kps0_dict = self._choose_keypoints(data['keypoints0'], data['gt_match0'], keypoints0_new_indices)
 
         # Add noisy keypoints to image1 data
-        keypoints1_new_indices = self._generate_random_idx_for_annotated_kps(data['keypoints1'].shape[0])
-        noisy_kps1_dict = self._add_noisy_keypoints(data['keypoints1'],
-                                                    data['gt_match1'],
-                                                    keypoints1_new_indices)
+        keypoints1_new_indices, add_kps1 = self._generate_random_idx_for_annotated_kps(data['keypoints1'].shape[0])
+        if add_kps1:
+            noisy_kps1_dict = self._add_noisy_keypoints(data['keypoints1'],
+                                                        data['gt_match1'],
+                                                        keypoints1_new_indices)
+        else:
+            noisy_kps1_dict = self._choose_keypoints(data['keypoints1'], data['gt_match1'], keypoints1_new_indices)
 
         # Update the indices in gt_match0_noisy and gt_match1_noisy to correspond to the noisy keypoint indices
-        gt_match0_noisy = np.where(noisy_kps0_dict['noisy_gt_match'] == NO_MATCH,
-                                   noisy_kps0_dict['noisy_gt_match'],
-                                   keypoints1_new_indices[noisy_kps0_dict['noisy_gt_match']])
-        gt_match1_noisy = np.where(noisy_kps1_dict['noisy_gt_match'] == NO_MATCH,
-                                   noisy_kps1_dict['noisy_gt_match'],
-                                   keypoints0_new_indices[noisy_kps1_dict['noisy_gt_match']])
+        gt_match0_noisy = self._update_matches_with_new_keypoints(noisy_kps0_dict, keypoints1_new_indices, add_kps1)
+        gt_match1_noisy = self._update_matches_with_new_keypoints(noisy_kps1_dict, keypoints0_new_indices, add_kps0)
+
         return {'noisy_keypoints0': noisy_kps0_dict['noisy_kps'],
                 'noisy_keypoints1': noisy_kps1_dict['noisy_kps'],
                 'is_noisy_keypoints0': noisy_kps0_dict['is_noisy_kps'],
@@ -73,6 +77,27 @@ class SSSPatchDataset(Dataset):
                 'noisy_gt_match1': gt_match1_noisy,
                 'noisy_scores0': noisy_kps0_dict['noisy_scores'],
                 'noisy_scores1': noisy_kps1_dict['noisy_scores']}
+
+    def _update_matches_with_new_keypoints(self, noisy_kps0_dict, keypoints1_new_indices, add_kps1) -> np.array:
+        if add_kps1:
+            gt_match0_noisy = np.where(noisy_kps0_dict['noisy_gt_match'] == NO_MATCH,
+                                       noisy_kps0_dict['noisy_gt_match'],
+                                       keypoints1_new_indices[noisy_kps0_dict['noisy_gt_match']])
+        else:
+            gt_match0_noisy = np.ones_like(noisy_kps0_dict['noisy_gt_match']) * -1
+            remaining_idx_with_matches = np.nonzero(np.isin(noisy_kps0_dict['noisy_gt_match'], keypoints1_new_indices))[0]
+            for i in remaining_idx_with_matches:
+                gt_match0_noisy[i] = np.nonzero(keypoints1_new_indices == noisy_kps0_dict['noisy_gt_match'][i])[0][0]
+        return gt_match0_noisy
+
+    def _choose_keypoints(self, annotated_kps: np.array, gt_match: np.array,
+                          selected_indices: np.array) -> dict:
+        noisy_kps = annotated_kps[selected_indices, :]
+        noisy_gt_match = gt_match[selected_indices, :]
+        is_noisy = np.zeros_like(noisy_gt_match)
+        noisy_scores = np.ones_like(noisy_gt_match)
+        return {'noisy_kps': noisy_kps, 'noisy_gt_match': noisy_gt_match, 'is_noisy_kps': is_noisy,
+                'noisy_scores': noisy_scores}
 
     def _add_noisy_keypoints(self, annotated_kps: np.array, gt_match: np.array,
                              annotated_kps_indices: np.array) -> dict:
@@ -102,9 +127,22 @@ class SSSPatchDataset(Dataset):
         return {'noisy_kps': noisy_kps.astype(int), 'is_noisy_kps': is_noisy_kps,
                 'noisy_gt_match': noisy_gt_match.astype(int), 'noisy_scores': noisy_scores.astype(float)}
 
-    def _generate_random_idx_for_annotated_kps(self, num_annotated_kps: int) -> np.array:
+    def _generate_random_idx_for_annotated_kps(self, num_annotated_kps: int) -> (np.array, bool):
         # TODO: handle the case where num_annotated_kps > self.num_kps (random sample up to self.num_kps?)
-        return np.random.choice(self.num_kps, size=num_annotated_kps, replace=False).astype(int)
+        """The random indices returned should be interpreted depending on whether num_annotated_kps is larger than
+        self.num_kps:
+        case 1: self.num_kps >= num_annotated_kps (add_kps=True)
+            new_idx[i] = j: noisy_kps[j] = orig_kps[i]
+        case 2: self.num_kps < num_annotated_kps (add_kps=False)
+            new_idx[i] = j: noisy_kps[i] = orig_kps[j]
+        """
+
+        add_kps = self.num_kps >= num_annotated_kps
+        if add_kps:
+            new_idx = np.random.choice(self.num_kps, size=num_annotated_kps, replace=False).astype(int)
+        else:
+            new_idx = random.choice(num_annotated_kps, size=self.num_kps, replace=False).astype(int)
+        return new_idx, add_kps
 
     def _load_patch(self, index: int):
         return np.load(os.path.join(self.npz_folder, f'{index}.npz'))
