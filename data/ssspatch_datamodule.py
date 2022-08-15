@@ -3,7 +3,9 @@ from typing import Optional
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, random_split
+from torchvision.transforms import transforms
 
+from data.image_transforms import ColumnwiseNormalization
 from data.ssspatch_dataset import SSSPatchDataset
 
 
@@ -20,8 +22,9 @@ class SSSPatchDataModule(pl.LightningDataModule):
         self.eval_split = config.data_eval_split
         self.batch_size = config.data_batch_size
         self.num_workers = config.data_num_workers
-        self.train_image_transform = None
-        self.test_image_transform = None
+        self.a_max = 3.
+        self.train_image_transform = transforms.Compose([ColumnwiseNormalization(a_max=self.a_max)])
+        self.test_image_transform = transforms.Compose([ColumnwiseNormalization(a_max=self.a_max)])
         self.save_hyperparameters()
 
     @staticmethod
