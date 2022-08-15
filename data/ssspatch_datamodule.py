@@ -20,6 +20,8 @@ class SSSPatchDataModule(pl.LightningDataModule):
         self.eval_split = config.data_eval_split
         self.batch_size = config.data_batch_size
         self.num_workers = config.data_num_workers
+        self.train_image_transform = None
+        self.test_image_transform = None
         self.save_hyperparameters()
 
     @staticmethod
@@ -36,7 +38,8 @@ class SSSPatchDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None) -> None:
         # Set up train and validation datasets
         ssspatch_train_full = SSSPatchDataset(root=self.root,  num_kps=self.num_kps,
-                                              min_overlap_percentage=self.min_overlap, train=True)
+                                              min_overlap_percentage=self.min_overlap, train=True,
+                                              transform=self.train_image_transform)
         ssspatch_train_full_len = len(ssspatch_train_full)
         val_len = int(ssspatch_train_full_len * self.eval_split)
         train_len = ssspatch_train_full_len - val_len
@@ -47,7 +50,8 @@ class SSSPatchDataModule(pl.LightningDataModule):
         # Set up test dataset
         self.ssspatch_test = SSSPatchDataset(root=self.root,
                                              num_kps=self.num_kps,
-                                             min_overlap_percentage=self.min_overlap, train=False)
+                                             min_overlap_percentage=self.min_overlap, train=False,
+                                             transform=self.test_image_transform)
 
     def train_dataloader(self):
         return DataLoader(self.ssspatch_train, batch_size=self.batch_size, num_workers=self.num_workers)
