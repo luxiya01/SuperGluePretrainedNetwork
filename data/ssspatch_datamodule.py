@@ -14,29 +14,19 @@ from data.ssspatch_dataset import SSSPatchDataset
 
 class SSSPatchDataModule(pl.LightningDataModule):
     def __init__(self,
-                 config):
+                 root: str, num_kps: int = 100, min_overlap: float = .15, eval_split: float = .1,
+                 batch_size: int = 1, num_workers: int = 1):
         super().__init__()
-        self.root = config.data_root
-        self.num_kps = config.data_num_kps
-        self.min_overlap = config.data_min_overlap
-        self.eval_split = config.data_eval_split
-        self.batch_size = config.data_batch_size
-        self.num_workers = config.data_num_workers
+        self.root = root
+        self.num_kps = num_kps
+        self.min_overlap = min_overlap
+        self.eval_split = eval_split
+        self.batch_size = batch_size
+        self.num_workers = num_workers
         self.a_max = 3.
         self.train_image_transform = transforms.Compose([ColumnwiseNormalization(a_max=self.a_max)])
         self.test_image_transform = transforms.Compose([ColumnwiseNormalization(a_max=self.a_max)])
         self.save_hyperparameters()
-
-    @staticmethod
-    def add_model_specific_args(parent_parser):
-        parser = parent_parser.add_argument_group('SSSPatchDataModule')
-        parser.add_argument('--data_root', type=str, default='')
-        parser.add_argument('--data_num_kps', type=int, default=100)
-        parser.add_argument('--data_min_overlap', type=float, default=.15)
-        parser.add_argument('--data_eval_split', type=float, default=.1)
-        parser.add_argument('--data_batch_size', type=int, default=1)
-        parser.add_argument('--data_num_workers', type=int, default=1)
-        return parent_parser
 
     def setup(self, stage: Optional[str] = None) -> None:
         # Set up train and validation datasets

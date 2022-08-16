@@ -9,29 +9,22 @@ from .superglue import SuperGlue
 class MatchingTrain(pl.LightningModule):
     """ Image Matching Frontend (various descriptors) + Backend (SuperGlue) """
 
-    def __init__(self, config):
+    def __init__(self, descriptor_dim: int = 256, keypoint_encoder: list = [32, 64, 128, 256],
+                 gnn_layers: list = ['self', 'cross'] * 9, sinkhorn_iterations: int = 100,
+                 match_threshold: float = .2, learning_rate: float = 1e-4,
+                 matched_loss_weight: float = .5):
         super().__init__()
-        self.config = config
+
         # TODO: allow changing descriptors
         self.descriptor = SIFTFeatureExtractor(patch_size=32)
-        self.superglue = SuperGlue(config)
-        self.learning_rate = config.learning_rate
-        self.matched_loss_weight = config.matched_loss_weight
+        self.descriptor_dim = descriptor_dim
+        self.superglue = SuperGlue(descriptor_dim, keypoint_encoder,
+                                   gnn_layers, sinkhorn_iterations, match_threshold)
+        self.learning_rate = learning_rate
+        self.matched_loss_weight = matched_loss_weight
 
         self.save_hyperparameters()
         print(self.hparams)
-
-    @staticmethod
-    def add_model_specific_args(parent_parser):
-        parser = parent_parser.add_argument_group("MatchingTrain")
-        parser.add_argument('--descriptor_dim', type=int, default=256)
-        parser.add_argument('--keypoint_encoder', type=list, default=[32, 64, 128, 256])
-        parser.add_argument('--gnn_layers', type=list, default=['self', 'cross'] * 9)
-        parser.add_argument('--sinkhorn_iterations', type=int, default=100)
-        parser.add_argument('--match_threshold', type=float, default=0.2)
-        parser.add_argument('--learning_rate', type=float, default=1e-4)
-        parser.add_argument('--matched_loss_weight', type=float, default=.5)
-        return parent_parser
 
     def forward(self, data):
         """ Run SuperGlue on input data
