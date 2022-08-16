@@ -2,23 +2,24 @@ import pytorch_lightning as pl
 import torch
 
 from data.ssspatch_dataset import NO_MATCH
-from .feature_extractor import SIFTFeatureExtractor
+from .feature_extractor import SIFTFeatureExtractor, FeatureExtractor
 from .superglue import SuperGlue
 
 
 class MatchingTrain(pl.LightningModule):
     """ Image Matching Frontend (various descriptors) + Backend (SuperGlue) """
 
-    def __init__(self, descriptor_dim: int = 256, keypoint_encoder: list = [32, 64, 128, 256],
+    def __init__(self, descriptor: FeatureExtractor = SIFTFeatureExtractor(),
+                 keypoint_encoder: list = [32, 64, 128, 256],
                  gnn_layers: list = ['self', 'cross'] * 9, sinkhorn_iterations: int = 100,
                  match_threshold: float = .2, learning_rate: float = 1e-4,
                  matched_loss_weight: float = .5):
         super().__init__()
 
-        # TODO: allow changing descriptors
-        self.descriptor = SIFTFeatureExtractor(patch_size=32)
-        self.descriptor_dim = descriptor_dim
-        self.superglue = SuperGlue(descriptor_dim, keypoint_encoder,
+        #TODO: pass in kwargs to modify descriptors so that it is serializable
+        self.descriptor = descriptor
+        self.descriptor_dim = descriptor.output_dims
+        self.superglue = SuperGlue(self.descriptor_dim, keypoint_encoder,
                                    gnn_layers, sinkhorn_iterations, match_threshold)
         self.learning_rate = learning_rate
         self.matched_loss_weight = matched_loss_weight
