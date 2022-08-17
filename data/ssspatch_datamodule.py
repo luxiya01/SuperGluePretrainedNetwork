@@ -15,7 +15,8 @@ from data.ssspatch_dataset import SSSPatchDataset
 class SSSPatchDataModule(pl.LightningDataModule):
     def __init__(self,
                  root: str, num_kps: int = 100, min_overlap: float = .15, eval_split: float = .1,
-                 batch_size: int = 1, num_workers: int = 1):
+                 batch_size: int = 1, num_workers: int = 1, train_image_transform: list = ['column_norm'],
+                 test_image_transform: list = ['column_norm'], data_kwargs: dict = None):
         super().__init__()
         self.root = root
         self.num_kps = num_kps
@@ -23,14 +24,23 @@ class SSSPatchDataModule(pl.LightningDataModule):
         self.eval_split = eval_split
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.a_max = 3.
-        self.train_image_transform = transforms.Compose([ColumnwiseNormalization(a_max=self.a_max)])
-        self.test_image_transform = transforms.Compose([ColumnwiseNormalization(a_max=self.a_max)])
+
+        self.train_image_transform = self._setup_transforms(train_image_transform, data_kwargs)
+        self.test_image_transform = self._setup_transforms(test_image_transform, data_kwargs)
+
         self.save_hyperparameters()
+
+    @staticmethod
+    def _setup_transforms(transform_names, kwargs):
+        tf = []
+        for name in transform_names:
+            if name == 'column_norm':
+                tf.append(ColumnwiseNormalization(a_max=kwargs['a_max']))
+        return transforms.Compose(tf)
 
     def setup(self, stage: Optional[str] = None) -> None:
         # Set up train and validation datasets
-        ssspatch_train_full = SSSPatchDataset(root=self.root,  num_kps=self.num_kps,
+        ssspatch_train_full = SSSPatchDataset(root=self.root, num_kps=self.num_kps,
                                               min_overlap_percentage=self.min_overlap, train=True,
                                               transform=self.train_image_transform)
         ssspatch_train_full_len = len(ssspatch_train_full)
