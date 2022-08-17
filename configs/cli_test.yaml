@@ -21,7 +21,7 @@ trainer:
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
       init_args:
         monitor: 'val/loss'
-        filename: 'sss-epoch{epoch:02d}-val-loss{val/loss:.2f}'
+        filename: 'sss-{epoch:02d}-{val/loss:.2f}'
         save_top_k: 3
 
 data:
