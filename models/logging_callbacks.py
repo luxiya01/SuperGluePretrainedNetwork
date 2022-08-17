@@ -22,13 +22,13 @@ class LogImagesCallback(pl.Callback):
         self._log_images(trainer, outputs, batch, stage='val')
 
     def on_train_batch_end(
-        self,
-        trainer: "pl.Trainer",
-        pl_module: "pl.LightningModule",
-        outputs: STEP_OUTPUT,
-        batch: Any,
-        batch_idx: int,
-        unused: int = 0,
+            self,
+            trainer: "pl.Trainer",
+            pl_module: "pl.LightningModule",
+            outputs: STEP_OUTPUT,
+            batch: Any,
+            batch_idx: int,
+            unused: int = 0,
     ) -> None:
         # Only log training images every n batch
         n = 50
@@ -36,13 +36,13 @@ class LogImagesCallback(pl.Callback):
             self._log_images(trainer, outputs, batch, stage='train')
 
     def on_test_batch_end(
-        self,
-        trainer: "pl.Trainer",
-        pl_module: "pl.LightningModule",
-        outputs: Optional[STEP_OUTPUT],
-        batch: Any,
-        batch_idx: int,
-        dataloader_idx: int,
+            self,
+            trainer: "pl.Trainer",
+            pl_module: "pl.LightningModule",
+            outputs: Optional[STEP_OUTPUT],
+            batch: Any,
+            batch_idx: int,
+            dataloader_idx: int,
     ) -> None:
         self._log_images(trainer, outputs, batch, stage='test')
 
@@ -82,7 +82,8 @@ class LogImagesCallback(pl.Callback):
     def _log_matches(trainer: "pl.Trainer", batch: Any, matches: dict, idx_in_batch: int, stage: str = 'val'):
         trainer.logger.log_image(
             key=f'{stage}/matches',
-            images=[make_matching_plot_fast(batch['image0'][idx_in_batch][0].cpu().numpy(), batch['image1'][idx_in_batch][0].cpu().numpy(),
+            images=[make_matching_plot_fast(batch['image0'][idx_in_batch][0].cpu().numpy(),
+                                            batch['image1'][idx_in_batch][0].cpu().numpy(),
                                             batch['noisy_keypoints0'][idx_in_batch].cpu().numpy(),
                                             batch['noisy_keypoints1'][idx_in_batch].cpu().numpy(),
                                             val['mkpts0'].cpu().numpy(),
