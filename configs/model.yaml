@@ -1,0 +1,8 @@
+model:
+  keypoint_encoder:  [32, 64, 128, 256]
+  sinkhorn_iterations: 100
+  match_threshold: .2
+  learning_rate: 1e-4
+  matched_loss_weight: .5
+  # N.B. NOT correct YAML syntax!
+  # gnn_layers: ['self', 'cross'] * 9

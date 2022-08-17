@@ -1,0 +1,9 @@
+model:
+  descriptor:
+    class_path: models.feature_extractor.SIFTFeatureExtractor
+    init_args:
+      patch_size: 32
+      num_ang_bins: 8
+      num_spatial_bins: 4
+      rootsift: false
+      clipval: .2

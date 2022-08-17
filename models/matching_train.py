@@ -9,14 +9,13 @@ from .superglue import SuperGlue
 class MatchingTrain(pl.LightningModule):
     """ Image Matching Frontend (various descriptors) + Backend (SuperGlue) """
 
-    def __init__(self, descriptor: FeatureExtractor = SIFTFeatureExtractor(),
+    def __init__(self, descriptor: FeatureExtractor,
                  keypoint_encoder: list = [32, 64, 128, 256],
                  gnn_layers: list = ['self', 'cross'] * 9, sinkhorn_iterations: int = 100,
                  match_threshold: float = .2, learning_rate: float = 1e-4,
                  matched_loss_weight: float = .5):
         super().__init__()
 
-        #TODO: pass in kwargs to modify descriptors so that it is serializable
         self.descriptor = descriptor
         self.descriptor_dim = descriptor.output_dims
         self.superglue = SuperGlue(self.descriptor_dim, keypoint_encoder,
