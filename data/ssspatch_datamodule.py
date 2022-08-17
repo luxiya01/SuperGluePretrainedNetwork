@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision.transforms import transforms
 
-from data.image_transforms import ColumnwiseNormalization
+from data.image_transforms import ColumnwiseNormalization, DataAugmentation
 from data.ssspatch_dataset import SSSPatchDataset
 
 
@@ -31,7 +31,7 @@ class SSSPatchDataModule(pl.LightningDataModule):
         self.save_hyperparameters()
 
     @staticmethod
-    def _setup_transforms(transform_names, kwargs):
+    def _setup_transforms(transform_names: list, kwargs: dict):
         tf = []
         for name in transform_names:
             if name == 'column_norm':
