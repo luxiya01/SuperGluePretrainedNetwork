@@ -23,7 +23,7 @@ class MatchingTrain(pl.LightningModule):
         self.learning_rate = learning_rate
         self.matched_loss_weight = matched_loss_weight
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['descriptor'])
         print(self.hparams)
 
     def forward(self, data):
