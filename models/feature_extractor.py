@@ -90,7 +90,7 @@ class MKDDFeatureExtractor(FeatureExtractor):
 
 
 class HyNetFeatureExtractor(FeatureExtractor):
-    def __init__(self, pretrained: bool = False, is_bias: bool = True,
+    def __init__(self, pretrained: bool = True, is_bias: bool = True,
                  is_bias_FRN: bool = True, output_dims: int = 128, drop_rate: float = .3):
         """Can only compute patch_size of 32x32."""
         super(HyNetFeatureExtractor, self).__init__(patch_size_for_feature=32)
