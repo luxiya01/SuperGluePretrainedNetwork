@@ -48,8 +48,7 @@ import torch
 from torch import nn
 
 
-def MLP(channels: List[int], do_bn: bool = False) -> nn.Module:
-    # TODO: enable bn! (Current issue: some patches only have 1 keypoint)
+def MLP(channels: List[int], do_bn: bool = True) -> nn.Module:
     """ Multi-layer perceptron """
     n = len(channels)
     layers = []
