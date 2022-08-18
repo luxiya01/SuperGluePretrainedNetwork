@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision.transforms import transforms
 
-from data.image_transforms import ColumnwiseNormalization, DataAugmentation
+from data.image_transforms import ColumnwiseNormalization
 from data.ssspatch_dataset import SSSPatchDataset
 
 
@@ -55,6 +55,7 @@ class SSSPatchDataModule(pl.LightningDataModule):
                                              num_kps=self.num_kps,
                                              min_overlap_percentage=self.min_overlap, train=False,
                                              transform=self.test_image_transform)
+        print('aaaaa')
 
     def train_dataloader(self):
         return DataLoader(self.ssspatch_train, batch_size=self.batch_size, num_workers=self.num_workers)
