@@ -25,17 +25,24 @@ class SSSPatchDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
 
+        self.image_augmentations = [transforms.ColorJitter(brightness=data_kwargs['color_jitter_brightness'],
+                                                           contrast=data_kwargs['color_jitter_contrast'],
+                                                           saturation=data_kwargs['color_jitter_saturation']),
+                                    transforms.GaussianBlur(kernel_size=data_kwargs['gaussian_blur_kernel_size']),
+                                    transforms.RandomAdjustSharpness(sharpness_factor=data_kwargs['sharpness_factor'])
+                                    ]
         self.train_image_transform = self._setup_transforms(train_image_transform, data_kwargs)
         self.test_image_transform = self._setup_transforms(test_image_transform, data_kwargs)
 
         self.save_hyperparameters()
 
-    @staticmethod
-    def _setup_transforms(transform_names: list, kwargs: dict):
+    def _setup_transforms(self, transform_names: list, kwargs: dict):
         tf = []
         for name in transform_names:
             if name == 'column_norm':
                 tf.append(ColumnwiseNormalization(a_max=kwargs['a_max']))
+            if name == 'image_aug':
+                tf.append(self.image_augmentations)
         return transforms.Compose(tf)
 
     def setup(self, stage: Optional[str] = None) -> None:
@@ -55,7 +62,6 @@ class SSSPatchDataModule(pl.LightningDataModule):
                                              num_kps=self.num_kps,
                                              min_overlap_percentage=self.min_overlap, train=False,
                                              transform=self.test_image_transform)
-        print('aaaaa')
 
     def train_dataloader(self):
         return DataLoader(self.ssspatch_train, batch_size=self.batch_size, num_workers=self.num_workers)

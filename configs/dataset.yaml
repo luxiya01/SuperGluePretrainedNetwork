@@ -9,3 +9,8 @@ data:
   test_image_transform: ['column_norm']
   data_kwargs:
     a_max: 3.
+    gaussian_blur_kernel_size: [3, 3]
+    color_jitter_brightness: .5
+    color_jitter_contrast: .5
+    color_jitter_saturation: .5
+    sharpness_factor: 2
