@@ -39,7 +39,7 @@ class SSSPatchDataModule(pl.LightningDataModule):
             if name == 'column_norm':
                 tf.append(ColumnwiseNormalization(a_max=kwargs['a_max']))
             if name == 'image_aug':
-                tf.append(self.image_augmentations)
+                tf.extend(self.image_augmentations)
         return transforms.Compose(tf)
 
     def setup(self, stage: Optional[str] = None) -> None:
