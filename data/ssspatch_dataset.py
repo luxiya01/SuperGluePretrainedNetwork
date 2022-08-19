@@ -129,7 +129,6 @@ class SSSPatchDataset(Dataset):
                 'noisy_gt_match': noisy_gt_match.astype(int), 'noisy_scores': noisy_scores.astype(float)}
 
     def _generate_random_idx_for_annotated_kps(self, num_annotated_kps: int) -> (np.array, bool):
-        # TODO: handle the case where num_annotated_kps > self.num_kps (random sample up to self.num_kps?)
         """The random indices returned should be interpreted depending on whether num_annotated_kps is larger than
         self.num_kps:
         case 1: self.num_kps >= num_annotated_kps (add_kps=True)
@@ -189,7 +188,6 @@ class SSSPatchDataset(Dataset):
         data_torch['sss_waterfall_image0'] = data_torch['sss_waterfall_image0'].unsqueeze(dim=0)
         data_torch['sss_waterfall_image1'] = data_torch['sss_waterfall_image1'].unsqueeze(dim=0)
 
-        # TODO: add transforms to images (image0/1 = transformed versions of sss_waterfall_image0/1)
         data_torch['image0'] = data_torch['sss_waterfall_image0'].detach().clone()
         data_torch['image1'] = data_torch['sss_waterfall_image1'].detach().clone()
 

@@ -9,9 +9,6 @@ from data.image_transforms import ColumnwiseNormalization
 from data.ssspatch_dataset import SSSPatchDataset
 
 
-# TODO: add transforms to the data?
-
-
 class SSSPatchDataModule(pl.LightningDataModule):
     def __init__(self,
                  root: str, num_kps: int = 100, min_overlap: float = .15, eval_split: float = .1,
