@@ -1,0 +1,10 @@
+export MAX_EPOCHS=10
+export RUN_NAME='test_run'
+export NUM_KPS=100
+export BATCH_SIZE=10
+export NUM_WORKERS=10
+export TRAIN_IMAGE_TRANSFORMS=("column_norm" "image_aug")
+export TEST_IMAGE_TRANSFORMS=("column_norm")
+export LEARNING_RATE='1e-4'
+export MATCHED_LOSS_WEIGHT=.5
+export DESCRIPTOR="models.feature_extractor.SIFTFeatureExtractor"
