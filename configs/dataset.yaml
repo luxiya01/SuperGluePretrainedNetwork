@@ -5,7 +5,7 @@ data:
   eval_split: .1
   batch_size: 10
   num_workers: 10
-  train_image_transform: ['column_norm', 'image_aug']
+  train_image_transform: ['column_norm']
   test_image_transform: ['column_norm']
   data_kwargs:
     a_max: 3.

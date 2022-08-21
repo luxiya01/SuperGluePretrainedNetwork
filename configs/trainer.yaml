@@ -1,10 +1,10 @@
 trainer:
-  max_epochs: 10
+  max_epochs: 20
   logger:
     - class_path: WandbLogger
       init_args:
         project: 'sss-corr-training'
-        name: '220819_sift_col_norm'
+        name: '220819_sift_col_norm_no_swa'
         log_model: 'all'
         dir: 'training'
   accelerator: 'gpu'
@@ -16,15 +16,15 @@ trainer:
       init_args:
         monitor: 'val/loss'
         mode: 'min'
-        patience: 5
+        patience: 3
         check_finite: true
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
       init_args:
         monitor: 'val/loss'
         filename: 'sss-{epoch:02d}-{val/loss:.2f}'
         save_top_k: 3
-    - class_path: pytorch_lightning.callbacks.StochasticWeightAveraging
-      init_args:
-        swa_lrs: .05
-        swa_epoch_start: .5
+#    - class_path: pytorch_lightning.callbacks.StochasticWeightAveraging
+#      init_args:
+#        swa_lrs: .05
+#        swa_epoch_start: .5
     - class_path: models.logging_callbacks.LogImagesCallback
