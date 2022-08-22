@@ -7,4 +7,5 @@ from models.matching_train import MatchingTrain
 # i.e. check out wandb/[run]/files/config.yaml for actual experiment config!
 cli = LightningCLI(MatchingTrain, SSSPatchDataModule,
                    save_config_filename='config_cli.yaml',
-                   save_config_overwrite=True)
+                   save_config_overwrite=True,
+                   env_parse=True)
