@@ -19,6 +19,8 @@ class LogImagesCallback(pl.Callback):
             batch_idx: int,
             dataloader_idx: int,
     ) -> None:
+        # Only log validation images every n batch
+        n = 100
         self._log_images(trainer, outputs, batch, stage='val')
 
     def on_train_batch_end(
@@ -31,7 +33,7 @@ class LogImagesCallback(pl.Callback):
             unused: int = 0,
     ) -> None:
         # Only log training images every n batch
-        n = 50
+        n = 1000
         if batch_idx % n == 0:
             self._log_images(trainer, outputs, batch, stage='train')
 
