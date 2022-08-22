@@ -2,22 +2,13 @@ model:
   keypoint_encoder:  [32, 64, 128, 256]
   sinkhorn_iterations: 100
   match_threshold: .2
-  learning_rate: ${LEARNING_RATE}
-  matched_loss_weight: ${MATCHED_LOSS_WEIGHT}
   # N.B. NOT correct YAML syntax! Need to write out all layers...
   # gnn_layers: ['self', 'cross'] * 9
-  descriptor:
-    class_path: ${DESCRIPTOR}
 
 data:
   root: '/home/li/Documents/sss-correspondence/data/GullmarsfjordSMaRC20210209_ssh_annotations/survey2_better_resolution/9-0169to0182-nbr_pings-1301_annotated/patch240_step40_test0.1_refSSH-0170_OrderedDict/'
-  num_kps: ${NUM_KPS}
   min_overlap: .2
   eval_split: .1
-  batch_size: ${BATCH_SIZE}
-  num_workers: ${NUM_WORKERS}
-  train_image_transform: ${TRAIN_IMAGE_TRANSFORM}
-  test_image_transform: ${TEST_IMAGE_TRANSFORM}
   data_kwargs:
     a_max: 3.
     gaussian_blur_kernel_size: [3, 3]
@@ -27,14 +18,6 @@ data:
     sharpness_factor: 2
 
 trainer:
-  max_epochs: ${MAX_EPOCHS}
-  logger:
-    - class_path: WandbLogger
-      init_args:
-        project: 'sss-corr-training'
-        name: ${RUN_NAME}
-        log_model: 'all'
-        dir: 'training'
   accelerator: 'gpu'
   devices: 1
   gradient_clip_val: .5
@@ -51,8 +34,4 @@ trainer:
         monitor: 'val/loss'
         filename: 'sss-{epoch:02d}-{val/loss:.2f}'
         save_top_k: 3
-    - class_path: pytorch_lightning.callbacks.StochasticWeightAveraging
-      init_args:
-        swa_lrs: .05
-        swa_epoch_start: .5
     - class_path: models.logging_callbacks.LogImagesCallback
