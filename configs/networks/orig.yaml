@@ -1,0 +1,7 @@
+model:
+  keypoint_encoder:  [32, 64, 128, 256]
+  sinkhorn_iterations: 100
+  match_threshold: .2
+  # N.B. NOT correct YAML syntax! Need to write out all layers...
+  # gnn_layers: ['self', 'cross'] * 9
+

@@ -1,10 +1,3 @@
-model:
-  keypoint_encoder:  [32, 64, 128, 256]
-  sinkhorn_iterations: 100
-  match_threshold: .2
-  # N.B. NOT correct YAML syntax! Need to write out all layers...
-  # gnn_layers: ['self', 'cross'] * 9
-
 data:
   root: '/home/li/Documents/sss-correspondence/data/GullmarsfjordSMaRC20210209_ssh_annotations/survey2_better_resolution/9-0169to0182-nbr_pings-1301_annotated/patch240_step40_test0.1_refSSH-0170_OrderedDict/'
   min_overlap: .2
