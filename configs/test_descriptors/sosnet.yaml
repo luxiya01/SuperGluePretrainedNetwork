@@ -1,0 +1,22 @@
+model:
+  learning_rate: 1e-4
+  matched_loss_weight: .5
+  descriptor:
+    class_path: 'models.feature_extractor.SOSNetFeatureExtractor'
+
+data:
+  num_kps: 100
+  batch_size: 1
+  num_workers: 20
+  train_image_transform: ['column_norm']
+  test_image_transform: ['column_norm']
+
+trainer:
+  max_epochs: 20
+  logger:
+    - class_path: WandbLogger
+      init_args:
+        project: 'sss-corr-training'
+        name: '220824-sosnet-col-norm-test'
+        log_model: 'all'
+        dir: 'training'
