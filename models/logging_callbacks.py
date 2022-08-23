@@ -25,7 +25,7 @@ class LogImagesCallback(pl.Callback):
             dataloader_idx: int,
     ) -> None:
         # Only log validation images every n batch
-        if batch % self.val_log_every == 0:
+        if batch_idx % self.val_log_every == 0:
             self._log_images(trainer, outputs, batch, stage='val')
 
     def on_train_batch_end(
