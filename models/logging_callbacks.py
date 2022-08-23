@@ -51,7 +51,7 @@ class LogImagesCallback(pl.Callback):
             dataloader_idx: int,
     ) -> None:
         # Only log test images every n batch
-        if batch_idx % self.test_log_every:
+        if batch_idx % self.test_log_every == 0:
             self._log_images(trainer, outputs, batch, stage='test')
 
     def _log_images(self, trainer: "pl.Trainer", outputs: Optional[STEP_OUTPUT], batch: Any, stage: str = 'val'):
