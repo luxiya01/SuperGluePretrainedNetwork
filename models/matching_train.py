@@ -67,7 +67,7 @@ class MatchingTrain(pl.LightningModule):
             self.log(f'val/{k}', v, on_step=True, on_epoch=True)
         return {'loss': loss, 'pred': pred, **metrics}
 
-    def test_step(self, batch):
+    def test_step(self, batch, batch_idx):
         pred = self.forward(batch)
         pred_scores = pred['scores']
         loss = self.compute_loss(pred_scores, batch)
