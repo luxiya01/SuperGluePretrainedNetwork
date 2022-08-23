@@ -10,6 +10,11 @@ from models.utils import make_matching_plot_fast
 
 
 class LogImagesCallback(pl.Callback):
+    def __init__(self, train_log_every: int = 1000, val_log_every: int = 1000, test_log_every: int = 1):
+        self.train_log_every = train_log_every
+        self.val_log_every = val_log_every
+        self.test_log_every = test_log_every
+
     def on_validation_batch_end(
             self,
             trainer: "pl.Trainer",
@@ -20,8 +25,8 @@ class LogImagesCallback(pl.Callback):
             dataloader_idx: int,
     ) -> None:
         # Only log validation images every n batch
-        n = 100
-        self._log_images(trainer, outputs, batch, stage='val')
+        if batch % self.val_log_every == 0:
+            self._log_images(trainer, outputs, batch, stage='val')
 
     def on_train_batch_end(
             self,
@@ -33,8 +38,7 @@ class LogImagesCallback(pl.Callback):
             unused: int = 0,
     ) -> None:
         # Only log training images every n batch
-        n = 1000
-        if batch_idx % n == 0:
+        if batch_idx % self.train_log_every == 0:
             self._log_images(trainer, outputs, batch, stage='train')
 
     def on_test_batch_end(
@@ -46,7 +50,9 @@ class LogImagesCallback(pl.Callback):
             batch_idx: int,
             dataloader_idx: int,
     ) -> None:
-        self._log_images(trainer, outputs, batch, stage='test')
+        # Only log test images every n batch
+        if batch_idx % self.test_log_every:
+            self._log_images(trainer, outputs, batch, stage='test')
 
     def _log_images(self, trainer: "pl.Trainer", outputs: Optional[STEP_OUTPUT], batch: Any, stage: str = 'val'):
         for i in range(batch['idx0'].shape[0]):
