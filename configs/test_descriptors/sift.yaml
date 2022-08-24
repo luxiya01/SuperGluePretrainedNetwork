@@ -18,6 +18,6 @@ trainer:
     - class_path: WandbLogger
       init_args:
         project: 'sss-corr-training'
-        name: '220824-sift-col-norm-test'
+        name: '220824-sift-col-norm-test-addnoisy'
         log_model: 'all'
         dir: 'training'

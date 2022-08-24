@@ -163,20 +163,21 @@ class SSSPatchDataset(Dataset):
                                      'gt_match0': np.array(self.overlap_kps_dict[str(idx0)][str(idx1)]),
                                      'gt_match1': np.array(self.overlap_kps_dict[str(idx1)][str(idx0)])}
 
-        # Only add noisy keypoints and matches to training sets!
-        if self.train:
-            noisy_keypoints_and_matches = self._add_noisy_keypoints_and_modify_noisy_gt_match(raw_keypoints_and_matches)
-        else:
-            noisy_keypoints_and_matches = {'noisy_keypoints0': raw_keypoints_and_matches['keypoints0'],
-                                           'noisy_keypoints1': raw_keypoints_and_matches['keypoints1'],
-                                           'is_noisy_keypoints0': np.zeros(
-                                               raw_keypoints_and_matches['keypoints0'].shape[0], dtype=bool),
-                                           'is_noisy_keypoints1': np.zeros(
-                                               raw_keypoints_and_matches['keypoints1'].shape[0], dtype=bool),
-                                           'noisy_gt_match0': raw_keypoints_and_matches['gt_match0'],
-                                           'noisy_gt_match1': raw_keypoints_and_matches['gt_match1'],
-                                           'noisy_scores0': np.ones(raw_keypoints_and_matches['keypoints0'].shape[0]),
-                                           'noisy_scores1': np.ones(raw_keypoints_and_matches['keypoints1'].shape[0])}
+        # Alt 1: Only add noisy keypoints and matches to training sets!
+        # Alt 2: Add noisy keypoints both to training and to test sets
+        # if self.train:
+        noisy_keypoints_and_matches = self._add_noisy_keypoints_and_modify_noisy_gt_match(raw_keypoints_and_matches)
+        # else:
+        #   noisy_keypoints_and_matches = {'noisy_keypoints0': raw_keypoints_and_matches['keypoints0'],
+        #                                  'noisy_keypoints1': raw_keypoints_and_matches['keypoints1'],
+        #                                  'is_noisy_keypoints0': np.zeros(
+        #                                      raw_keypoints_and_matches['keypoints0'].shape[0], dtype=bool),
+        #                                  'is_noisy_keypoints1': np.zeros(
+        #                                      raw_keypoints_and_matches['keypoints1'].shape[0], dtype=bool),
+        #                                  'noisy_gt_match0': raw_keypoints_and_matches['gt_match0'],
+        #                                  'noisy_gt_match1': raw_keypoints_and_matches['gt_match1'],
+        #                                  'noisy_scores0': np.ones(raw_keypoints_and_matches['keypoints0'].shape[0]),
+        #                                  'noisy_scores1': np.ones(raw_keypoints_and_matches['keypoints1'].shape[0])}
 
         basic_patch_info_keys = ['idx', 'sss_waterfall_image']
         raw_patch_info = {**{f'{k}0': patch0[k] for k in basic_patch_info_keys},
